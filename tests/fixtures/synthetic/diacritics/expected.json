@@ -1,0 +1,14 @@
+{
+ "_doc": "Names differing only by diacritics and spacing. Measures whether normalisation collapses them correctly without merging genuinely distinct units.",
+ "_has_coarse": false,
+ "conserves": true,
+ "match_by_name": {
+  "Dak Lak": "D.001",
+  "KonTum": "D.002",
+  "Thua Thien Hue": "D.003"
+ },
+ "n_stable_groups": 3,
+ "snapshots": {
+  "2010": 3
+ }
+}

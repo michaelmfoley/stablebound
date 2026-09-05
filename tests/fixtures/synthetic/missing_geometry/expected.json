@@ -1,0 +1,10 @@
+{
+ "_doc": "A unit present in the lineage and the statistics but absent from the shapefile. It must be reported, not silently dropped — a dropped unit removes its production from every downstream total.",
+ "_has_coarse": false,
+ "snapshots": {
+  "2010": 2
+ },
+ "unmapped_units": [
+  "G.002"
+ ]
+}

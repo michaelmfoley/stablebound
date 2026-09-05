@@ -1,0 +1,78 @@
+# Pinned external sources.
+#
+# Everything StableBound reads that is NOT bundled in the package. Each entry
+# records a path relative to $STABLEBOUND_DATA_ROOT, a sha256, and the columns
+# the code depends on.
+#
+# Why pin rather than vendor: the India statistics alone are 376k rows, GAUL L2
+# is 43,819 global features, and the FEWS relationship tables are not ours to
+# redistribute. So the contract is "pinned, not bundled" — a drifted input fails
+# loudly with both hashes instead of silently changing published numbers.
+#
+# A hand-curated source (India's lineage workbooks) cannot be regenerated,
+# only pinned. A derived one (the bundled India files, the prepared shapefile)
+# is regenerated from these by the tools/india scripts and byte-compared.
+#
+#   python tools/india/paths.py          # report status
+#   python tools/india/paths.py --pin    # re-pin after a DELIBERATE update
+#
+# Re-pinning is never automatic: a silent re-pin defeats the purpose.
+# An empty sha256 means "present but not yet pinned" and is reported by
+# verify_sources(strict=True).
+
+
+[source.india_stats]
+description = "India DESAGRI crop statistics (Feb 2025), 376k rows"
+path = "data/india/statistics/upag_des_full/ag_stats_combined_fnid.csv"
+sha256 = "53558103cac6e6f9ac0b8737a52cd178e53a7e25bb901b37c2f45c011c7f8e9a"
+columns = ["ADM2_ID", "Year"]
+
+[source.india_state_boundaries]
+# The second input to prepare_geolocet.py. Pinned because it is an input to a
+# pinned output: without this, the trimmed district shapefile could stop being
+# reproducible and nothing would notice -- the same shape as the AgStats
+# workbook whose rename went unseen for 37 days because it was not pinned.
+#
+# Two quirks handled by the consumer, not here: its names carry diacritic
+# corruption (">" is a long A, "|" a long I) and 4 of its 40 features are
+# DISPUTED territories rather than states.
+description = "India official state boundaries 2021 (ADM1 source for the district state column)"
+path = "shapefiles/India/official_shapefiles/India_Official_Boundaries_2021/STATE_BOUNDARY.shp"
+sha256 = "d9b0bc8a0541eb9774dc4874128ccabf28f502db4fdbcb9857de30ab82d6319c"
+
+[source.india_districts]
+# The publishable district geometry: 786 features, name + state + geometry,
+# 4.3 MB against the raw Geolocet's 28. Built by
+# tools/india/prepare_geolocet.py, which joins the raw file to the
+# official 2021 state boundaries. Verified byte-identical across two runs
+# before pinning -- an unstable artifact in a manifest fails for the wrong
+# reason and teaches people to ignore it.
+#
+# The state column is what closes stablebound-dev#4: two districts named
+# Bilaspur cannot be separated by name, and the wrong one dissolves into a
+# stable group 1,100 km away.
+description = "India district geometry, trimmed, with an ADM1 column (Geolocet + official 2021 state boundaries)"
+path = "data/india/boundaries/modified_shapefiles/India_districts_2024/India_districts_2024.shp"
+sha256 = "e71c10ee8761c4c35dbb2d898a849fc858916dedd9e305e798eaa99627183140"
+
+[source.india_shapefile]
+description = "India modern district geometry (Geolocet, labelled 2023, data is 2024)"
+path = "data/india/boundaries/modified_shapefiles/India_Geolocet_2023_simplified/India_admin_level_5_geolocet.shp"
+sha256 = "79dc53d72fa198bf81374a209d8c8742d92b8bbd0267775b1ca766f1b1e6401c"
+
+[source.india_upload_agstats]
+# Pinned 2026-09-02. This file was NOT pinned, and that is why its rename went
+# unseen: IN_AgStats_04May2026.xlsx became IN_AgStats_27July2026.xlsx on
+# 2026-07-27, run_deliverables.py still named the May file, and the step
+# crashed for 37 days. `run_all` is not in CI -- every source here lives
+# outside the repo -- so the 0.2s `python -m regression.paths` preflight is the
+# guard that would have caught it, and it could not, because nothing pinned it.
+description = "Frozen India FEWS AgStats workbook (regression target)"
+path = "stablebound-analysis/india_temp/upload_ready/IN_AgStats_27July2026.xlsx"
+sha256 = "5d5dceec83331cf5bd3440bb692f72b5fc3bed5dd7e774f045f28e865019a4e2"
+
+[source.india_upload_ready]
+description = "Frozen India FEWS reference bundle (regression target)"
+path = "stablebound-analysis/india_temp/upload_ready/IN_GeographicUnitRelationship.csv"
+sha256 = "04f8d005c086aac5f6dfd33eff7e6dc3fa6cab5fe02bd69a46125f9a3047b76c"
+columns = ["relationship_type", "fnid_from_unit"]

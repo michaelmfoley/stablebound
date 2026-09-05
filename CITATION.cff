@@ -1,0 +1,23 @@
+cff-version: 1.2.0
+message: "If you use StableBound in your research, please cite both the software and the paper below."
+title: "StableBound"
+abstract: "A reproducible framework for harmonizing subnational data across administrative boundary changes."
+type: software
+version: 0.1.5
+date-released: 2026-09-05
+license: MIT
+repository-code: "https://github.com/michaelmfoley/stablebound"
+authors:
+  - family-names: Foley
+    given-names: Michael M.
+    orcid: "https://orcid.org/0000-0000-0000-0000"   # TODO: replace with the author's ORCID
+    affiliation: "Department of Earth and Planetary Sciences, Harvard University"
+preferred-citation:
+  type: article
+  title: "StableBound: Stabilizing Administrative Statistics Across Changing Boundaries, with a District Crop Record and Administrative Lineage for India"
+  authors:
+    - family-names: Foley
+      given-names: Michael M.
+  journal: "Earth System Science Data"
+  year: 2026
+  notes: "In review. The companion dataset is archived at https://doi.org/10.5281/zenodo.21653283 and its pipeline at https://github.com/michaelmfoley/stablebound-india."

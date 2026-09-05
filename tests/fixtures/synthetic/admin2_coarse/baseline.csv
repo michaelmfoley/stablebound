@@ -1,0 +1,4 @@
+unit_id,name,year,coarse_id,coarse_name
+A.001,Dist1,2010,A.A1.01,StateA
+A.002,Dist2,2010,A.A1.01,StateA
+A.003,Dist3,2010,A.A1.02,StateB

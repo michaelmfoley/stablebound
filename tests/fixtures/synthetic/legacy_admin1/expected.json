@@ -1,0 +1,21 @@
+{
+ "_doc": "One admin1 country in the shape a FEWS relationship table describes: a base vintage, a split, a rename carried as a same-id successor, and a merge that makes the unit count fall. Its legacy-dialect twin is tests/fixtures/rt_convert/relationshiptable_XX.csv; each is the other's oracle, and neither is generated from the other. The ids are the ones rt_convert allocates from the twin (00007 is skipped because the rename collapses onto 00003), so the golden test can compare the converter's output against these files directly.",
+ "_has_coarse": false,
+ "conserves": true,
+ "n_stable_groups": 3,
+ "name_at": {
+  "XX.ADM1.00003": {
+   "2010": "Charlie",
+   "2021": "Charlton"
+  }
+ },
+ "snapshots": {
+  "2010": 4,
+  "2015": 4,
+  "2016": 5,
+  "2020": 5,
+  "2021": 5,
+  "2025": 5,
+  "2026": 4
+ }
+}

@@ -1,0 +1,6 @@
+# setuptools' default sdist heuristic includes tests/test_*.py but not the
+# fixtures or conftest they need, which shipped a test suite that could not
+# run. Take the whole tree.
+graft tests
+prune tests/**/__pycache__
+global-exclude *.py[cod] .DS_Store

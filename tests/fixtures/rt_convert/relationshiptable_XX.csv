@@ -1,0 +1,34 @@
+label,from_unit,to_unit,relationship_type,category,from_unit_name,to_unit_name,fnid_from_unit,fnid_to_unit,can_aggregate_to_from,can_aggregate_from_to
+Alpha is an Admin 1 within Exampleland,1001,9010,admin1_0,hierarchical,"Alpha, Exampleland",Exampleland,XX2010A101,XX2010A0,FALSE,TRUE
+Bravo is an Admin 1 within Exampleland,1002,9010,admin1_0,hierarchical,"Bravo, Exampleland",Exampleland,XX2010A102,XX2010A0,FALSE,TRUE
+Charlie is an Admin 1 within Exampleland,1003,9010,admin1_0,hierarchical,"Charlie, Exampleland",Exampleland,XX2010A103,XX2010A0,FALSE,TRUE
+Delta is an Admin 1 within Exampleland,1004,9010,admin1_0,hierarchical,"Delta, Exampleland",Exampleland,XX2010A104,XX2010A0,FALSE,TRUE
+Alpha split Alpha North,1001,2005,split,temporal,"Alpha, Exampleland","Alpha North, Exampleland",XX2010A101,XX2015A105,FALSE,TRUE
+Alpha split Alpha South,1001,2006,split,temporal,"Alpha, Exampleland","Alpha South, Exampleland",XX2010A101,XX2015A106,FALSE,TRUE
+Bravo successor Bravo,1002,2002,successor,temporal,"Bravo, Exampleland","Bravo, Exampleland",XX2010A102,XX2015A102,TRUE,TRUE
+Charlie successor Charlie,1003,2003,successor,temporal,"Charlie, Exampleland","Charlie, Exampleland",XX2010A103,XX2015A103,TRUE,TRUE
+Delta successor Delta,1004,2004,successor,temporal,"Delta, Exampleland","Delta, Exampleland",XX2010A104,XX2015A104,TRUE,TRUE
+Alpha North is an Admin 1 within Exampleland,2005,9015,admin1_0,hierarchical,"Alpha North, Exampleland",Exampleland,XX2015A105,XX2015A0,FALSE,TRUE
+Alpha South is an Admin 1 within Exampleland,2006,9015,admin1_0,hierarchical,"Alpha South, Exampleland",Exampleland,XX2015A106,XX2015A0,FALSE,TRUE
+Bravo is an Admin 1 within Exampleland,2002,9015,admin1_0,hierarchical,"Bravo, Exampleland",Exampleland,XX2015A102,XX2015A0,FALSE,TRUE
+Charlie is an Admin 1 within Exampleland,2003,9015,admin1_0,hierarchical,"Charlie, Exampleland",Exampleland,XX2015A103,XX2015A0,FALSE,TRUE
+Delta is an Admin 1 within Exampleland,2004,9015,admin1_0,hierarchical,"Delta, Exampleland",Exampleland,XX2015A104,XX2015A0,FALSE,TRUE
+Alpha North successor Alpha North,2005,3005,successor,temporal,"Alpha North, Exampleland","Alpha North, Exampleland",XX2015A105,XX2020A105,TRUE,TRUE
+Alpha South successor Alpha South,2006,3006,successor,temporal,"Alpha South, Exampleland","Alpha South, Exampleland",XX2015A106,XX2020A106,TRUE,TRUE
+Bravo successor Bravo,2002,3002,successor,temporal,"Bravo, Exampleland","Bravo, Exampleland",XX2015A102,XX2020A102,TRUE,TRUE
+Charlie successor Charlton,2003,3003,successor,temporal,"Charlie, Exampleland","Charlton, Exampleland",XX2015A103,XX2020A103,TRUE,TRUE
+Delta successor Delta,2004,3004,successor,temporal,"Delta, Exampleland","Delta, Exampleland",XX2015A104,XX2020A104,TRUE,TRUE
+Alpha North is an Admin 1 within Exampleland,3005,9020,admin1_0,hierarchical,"Alpha North, Exampleland",Exampleland,XX2020A105,XX2020A0,FALSE,TRUE
+Alpha South is an Admin 1 within Exampleland,3006,9020,admin1_0,hierarchical,"Alpha South, Exampleland",Exampleland,XX2020A106,XX2020A0,FALSE,TRUE
+Bravo is an Admin 1 within Exampleland,3002,9020,admin1_0,hierarchical,"Bravo, Exampleland",Exampleland,XX2020A102,XX2020A0,FALSE,TRUE
+Charlton is an Admin 1 within Exampleland,3003,9020,admin1_0,hierarchical,"Charlton, Exampleland",Exampleland,XX2020A103,XX2020A0,FALSE,TRUE
+Delta is an Admin 1 within Exampleland,3004,9020,admin1_0,hierarchical,"Delta, Exampleland",Exampleland,XX2020A104,XX2020A0,FALSE,TRUE
+Alpha North successor Alpha North,3005,4005,successor,temporal,"Alpha North, Exampleland","Alpha North, Exampleland",XX2020A105,XX2025A105,TRUE,TRUE
+Alpha South successor Alpha South,3006,4006,successor,temporal,"Alpha South, Exampleland","Alpha South, Exampleland",XX2020A106,XX2025A106,TRUE,TRUE
+Bravo merge BravoDelta,3002,4007,merge,temporal,"Bravo, Exampleland","BravoDelta, Exampleland",XX2020A102,XX2025A107,TRUE,FALSE
+Delta merge BravoDelta,3004,4007,merge,temporal,"Delta, Exampleland","BravoDelta, Exampleland",XX2020A104,XX2025A107,TRUE,FALSE
+Charlton successor Charlton,3003,4003,successor,temporal,"Charlton, Exampleland","Charlton, Exampleland",XX2020A103,XX2025A103,TRUE,TRUE
+Alpha North is an Admin 1 within Exampleland,4005,9025,admin1_0,hierarchical,"Alpha North, Exampleland",Exampleland,XX2025A105,XX2025A0,FALSE,TRUE
+Alpha South is an Admin 1 within Exampleland,4006,9025,admin1_0,hierarchical,"Alpha South, Exampleland",Exampleland,XX2025A106,XX2025A0,FALSE,TRUE
+BravoDelta is an Admin 1 within Exampleland,4007,9025,admin1_0,hierarchical,"BravoDelta, Exampleland",Exampleland,XX2025A107,XX2025A0,FALSE,TRUE
+Charlton is an Admin 1 within Exampleland,4003,9025,admin1_0,hierarchical,"Charlton, Exampleland",Exampleland,XX2025A103,XX2025A0,FALSE,TRUE

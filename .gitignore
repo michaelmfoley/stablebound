@@ -1,0 +1,71 @@
+# macOS
+.DS_Store
+
+# Excel/Word lock files. These appear next to any open workbook — including
+# the bundled country data under src/stablebound/data/ — and must never be
+# committed or shipped.
+~$*
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Editor / harness
+.claude/
+.idea/
+.vscode/
+
+# Build artifacts
+build/
+dist/
+
+# India data generators under tools/: ship the scripts, exclude their derived
+# outputs and intermediates (reproducible by re-running).
+tools/**/_out/
+tools/**/_prepared/
+
+# Documents whose redistribution rights are unclear
+/docs/references/
+
+# Local-only workspace (handoff notes, scratch)
+/_local/
+
+# Fuzz campaign output. The runner script is tracked; its findings are not —
+# a real finding gets promoted into tests/ as a fixture, not committed here.
+/qualification/_fuzz_failures/
+
+# Generated outputs
+/stablebound_out/
+notebooks/_*_out/
+examples/**/_out/
+
+# Backups / scratch
+*.bak
+
+# Manuscript artifacts at repo root
+/*.tex
+/*.log
+/*.pdf
+/*.bib
+
+# Google Drive Desktop syncs this directory and resolves conflicts by writing
+# a " 2" copy next to the original. Those copies are collected by pytest as
+# real test modules — they took the suite from 577 to 767 mid-session — and
+# would otherwise show up as untracked noise on every status.
+# The real fix is to stop syncing the checkout; this keeps git quiet meanwhile.
+* 2.*
+* 2
+*.tmp.drive*
+
+# Paper drafts. Not package source: no pipeline step, test, or figure reads
+# them, and the canonical copies live with the analysis they belong to.
+#
+# Ignored rather than left untracked because `provenance_record` derives its
+# `dirty` flag from `git status --porcelain`, which counts untracked paths. An
+# untracked paper/ therefore stamped every frozen manifest "built from a dirty
+# working tree — cannot be reproduced from the commit alone", which was false
+# and, being permanent, was training us to disregard a flag that matters.
+/paper/

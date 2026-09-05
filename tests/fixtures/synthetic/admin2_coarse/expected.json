@@ -1,0 +1,11 @@
+{
+ "_doc": "Districts carrying coarse (admin1) attribution, including a district that changes parent. Exercises the cross-level path the FEWS deliverable depends on.",
+ "_has_coarse": true,
+ "conserves": true,
+ "n_stable_groups": 3,
+ "snapshots": {
+  "2010": 3,
+  "2015": 3,
+  "2016": 4
+ }
+}

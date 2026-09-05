@@ -1,0 +1,11 @@
+{
+ "_doc": "R.001 and R.002 exchange territory in 2013. Two properties at once. (a) Grouping: the units were independent and the event forces their groups to union — get it wrong and you get two groups whose dissolved geometry overlaps. (b) Id convention: a Redistribute retires every unit it touches and issues new ids even where the NAME continues, because the id denotes a territorial extent and that extent changed. Real data does exactly this — India's Chennai IN.ADM2.00371 becomes 00966 and Vietnam's Dong Nai VN.ADM1.00008 becomes 00066, both keeping their names. A fixture that let the giver keep its id would encode a convention no real lineage uses.",
+ "_has_coarse": false,
+ "conserves": true,
+ "n_stable_groups": 2,
+ "snapshots": {
+  "2010": 3,
+  "2013": 3,
+  "2014": 3
+ }
+}

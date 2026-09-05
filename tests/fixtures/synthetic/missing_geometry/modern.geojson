@@ -1,0 +1,39 @@
+{
+ "type": "FeatureCollection",
+ "features": [
+  {
+   "type": "Feature",
+   "properties": {
+    "unit_id": "G.001",
+    "unit_name": "Mapped"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       1,
+       0.0
+      ],
+      [
+       1,
+       1.0
+      ],
+      [
+       0,
+       1.0
+      ],
+      [
+       0,
+       0.0
+      ],
+      [
+       1,
+       0.0
+      ]
+     ]
+    ]
+   }
+  }
+ ]
+}

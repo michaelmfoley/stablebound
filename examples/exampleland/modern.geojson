@@ -1,0 +1,12 @@
+{
+"type": "FeatureCollection",
+"name": "modern",
+"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
+"features": [
+{ "type": "Feature", "properties": { "unit_id": "E.011", "unit_name": "Alpha North" }, "geometry": { "type": "Polygon", "coordinates": [ [ [ 1.0, 0.0 ], [ 1.0, 1.0 ], [ 0.0, 1.0 ], [ 0.0, 0.0 ], [ 1.0, 0.0 ] ] ] } },
+{ "type": "Feature", "properties": { "unit_id": "E.012", "unit_name": "Alpha South" }, "geometry": { "type": "Polygon", "coordinates": [ [ [ 2.0, 0.0 ], [ 2.0, 1.0 ], [ 1.0, 1.0 ], [ 1.0, 0.0 ], [ 2.0, 0.0 ] ] ] } },
+{ "type": "Feature", "properties": { "unit_id": "E.002", "unit_name": "Bravo" }, "geometry": { "type": "Polygon", "coordinates": [ [ [ 3.0, 0.0 ], [ 3.0, 1.0 ], [ 2.0, 1.0 ], [ 2.0, 0.0 ], [ 3.0, 0.0 ] ] ] } },
+{ "type": "Feature", "properties": { "unit_id": "E.003", "unit_name": "Charlie Renamed" }, "geometry": { "type": "Polygon", "coordinates": [ [ [ 4.0, 0.0 ], [ 4.0, 1.0 ], [ 3.0, 1.0 ], [ 3.0, 0.0 ], [ 4.0, 0.0 ] ] ] } },
+{ "type": "Feature", "properties": { "unit_id": "E.013", "unit_name": "DeltaEcho" }, "geometry": { "type": "Polygon", "coordinates": [ [ [ 5.0, 0.0 ], [ 5.0, 1.0 ], [ 4.0, 1.0 ], [ 4.0, 0.0 ], [ 5.0, 0.0 ] ] ] } }
+]
+}

@@ -1,0 +1,3 @@
+event_year,event_type,parent_id,parent_name,child_id,child_name
+2014,Split,L.001,Ancestor,L.011,Left
+2014,Split,L.001,Ancestor,L.012,Right

@@ -1,0 +1,39 @@
+{
+ "type": "FeatureCollection",
+ "features": [
+  {
+   "type": "Feature",
+   "properties": {
+    "unit_id": "M.011",
+    "unit_name": "Big"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       3,
+       0.0
+      ],
+      [
+       3,
+       1.0
+      ],
+      [
+       0,
+       1.0
+      ],
+      [
+       0,
+       0.0
+      ],
+      [
+       3,
+       0.0
+      ]
+     ]
+    ]
+   }
+  }
+ ]
+}

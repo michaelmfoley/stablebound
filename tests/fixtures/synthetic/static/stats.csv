@@ -1,0 +1,5 @@
+unit_id,year,season,variable,value
+S.001,2010,Annual,area_ha,10.0
+S.001,2011,Annual,area_ha,10.0
+S.002,2010,Annual,area_ha,20.0
+S.002,2011,Annual,area_ha,20.0

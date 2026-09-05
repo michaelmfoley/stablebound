@@ -1,0 +1,12 @@
+{
+ "_doc": "Two units genuinely share a name and are separable only by coarse attribution. Name-only matching cannot resolve them, so the matcher must either use the coarse column or refuse — never guess.",
+ "_has_coarse": true,
+ "conserves": true,
+ "duplicate_names": [
+  "Springfield"
+ ],
+ "n_stable_groups": 3,
+ "snapshots": {
+  "2010": 3
+ }
+}

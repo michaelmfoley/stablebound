@@ -1,0 +1,5 @@
+event_year,event_type,parent_id,parent_name,child_id,child_name
+2012,Split,C.001,Aaa,C.011,Bbb
+2012,Split,C.001,Aaa,C.012,Ccc
+2016,Split,C.012,Ccc,C.021,Ddd
+2016,Split,C.012,Ccc,C.022,Eee

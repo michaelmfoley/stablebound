@@ -1,0 +1,5 @@
+event_year,event_type,parent_id,parent_name,child_id,child_name
+2013,Redistribute,R.001,Giver,R.011,Giver
+2013,Redistribute,R.001,Giver,R.012,Taker
+2013,Redistribute,R.002,Taker,R.012,Taker
+2013,Redistribute,R.002,Taker,R.011,Giver

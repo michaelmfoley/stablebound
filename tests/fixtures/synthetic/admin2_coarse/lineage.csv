@@ -1,0 +1,3 @@
+event_year,event_type,parent_id,parent_name,child_id,child_name,parent_coarse_id,parent_coarse_name,child_coarse_id,child_coarse_name
+2015,Split,A.001,Dist1,A.011,Dist1,A.A1.01,StateA,A.A1.01,StateA
+2015,Split,A.001,Dist1,A.012,Dist1b,A.A1.01,StateA,A.A1.02,StateB

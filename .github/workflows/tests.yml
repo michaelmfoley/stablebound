@@ -1,0 +1,62 @@
+name: tests
+
+on: [push, pull_request]
+
+jobs:
+  # Lint once rather than per Python version — ruff's result doesn't vary
+  # across the matrix, and a fast standalone job surfaces style failures
+  # without waiting on the geopandas installs below.
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install ruff
+      - run: ruff check src/ tests/ examples/ tools/ notebooks/
+
+  # The package ships py.typed, which promises consumers its inline
+  # annotations are meaningful. This checks that promise instead of leaving it
+  # unverified. Scope and the reasoning behind the exemption list are in
+  # [tool.mypy] in pyproject.toml — briefly: the pure-Python core is gated, and
+  # the DataFrame-facing modules are exempt because pandas-stubs types
+  # iterrows() values as `object`, which produces ~170 non-bugs.
+  typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          # Must match `python_version` in [tool.mypy]. This job ran on 3.12
+          # until 2026-07-30, when it began failing on a syntax error inside
+          # numpy's own stub: numpy 2.5 writes PEP 695 `type` statements in
+          # `__init__.pyi`, and mypy told to target 3.10 rejects them. The
+          # error aborted the run before any of our code was read. Installing
+          # under 3.10 resolves numpy 2.2 instead, whose stubs parse, and the
+          # version mypy analyses for is then the version it runs on.
+          python-version: "3.10"
+      - run: pip install mypy pandas-stubs
+      - run: mypy
+
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      # 3.10 is the floor and 3.12 the newest declared classifier in
+      # pyproject.toml; 3.11 sits between them. The geo stack tends to break
+      # at the edges, so both ends are tested.
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: pip install -e .[dev]
+      # Two tests self-skip on a clean checkout: they need
+      # `tools/india/_prepared/`, which is gitignored and generated locally by
+      # `tools/india/prepare_shapefile.py`. `tests/test_breakpoint.py` also
+      # skips as a whole unless the optional `Rbeast` dependency is installed
+      # (`pip install .[analysis]`), so the skipped count differs between CI
+      # and a local run with the analysis extra.
+      - run: pytest -q

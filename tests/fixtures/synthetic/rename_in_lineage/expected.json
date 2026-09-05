@@ -1,0 +1,16 @@
+{
+ "_doc": "A NameChange encoded as a self-referencing row. The unit keeps its id, so this must NOT create a new stable group, and name lookups must return the year-accurate name.",
+ "_has_coarse": false,
+ "conserves": true,
+ "n_stable_groups": 2,
+ "name_at": {
+  "N.001": {
+   "2010": "Oldname",
+   "2018": "Newname"
+  }
+ },
+ "snapshots": {
+  "2010": 2,
+  "2018": 2
+ }
+}

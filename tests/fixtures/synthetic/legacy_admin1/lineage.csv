@@ -1,0 +1,6 @@
+event_year,event_type,parent_id,parent_name,child_id,child_name
+2015,Split,XX.ADM1.00001,Alpha,XX.ADM1.00005,Alpha North
+2015,Split,XX.ADM1.00001,Alpha,XX.ADM1.00006,Alpha South
+2020,NameChange,XX.ADM1.00003,Charlie,XX.ADM1.00003,Charlton
+2025,Merge,XX.ADM1.00002,Bravo,XX.ADM1.00008,BravoDelta
+2025,Merge,XX.ADM1.00004,Delta,XX.ADM1.00008,BravoDelta

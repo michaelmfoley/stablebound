@@ -1,0 +1,13 @@
+{
+ "_doc": "Three parents merge into one child in 2015, but only two ever report. Completeness must show the third as missing rather than silently dividing by the number that happened to report.",
+ "_has_coarse": false,
+ "conserves": true,
+ "incomplete_year": 2010,
+ "missing_contains": "M.003",
+ "n_stable_groups": 1,
+ "snapshots": {
+  "2010": 3,
+  "2015": 3,
+  "2016": 1
+ }
+}

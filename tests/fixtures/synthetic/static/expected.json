@@ -1,0 +1,10 @@
+{
+ "_doc": "Zero events. The degenerate case: every stable group is one unit, and any code path that assumes at least one event should still work.",
+ "_has_coarse": false,
+ "conserves": true,
+ "n_stable_groups": 2,
+ "snapshots": {
+  "2010": 2,
+  "2011": 2
+ }
+}

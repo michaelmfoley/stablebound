@@ -1,0 +1,13 @@
+{
+ "_doc": "The parent keeps reporting for two years after it ceased, and a child reports a year before it existed. Both must be flagged rather than silently attributed, and neither may be dropped.",
+ "_has_coarse": false,
+ "conserves": true,
+ "expect_late_reporting": true,
+ "n_stable_groups": 1,
+ "snapshots": {
+  "2010": 1,
+  "2014": 1,
+  "2015": 2,
+  "2016": 2
+ }
+}

@@ -1,0 +1,141 @@
+{
+ "type": "FeatureCollection",
+ "features": [
+  {
+   "type": "Feature",
+   "properties": {
+    "unit_id": "A.011",
+    "unit_name": "Dist1"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       0.5,
+       0.0
+      ],
+      [
+       0.5,
+       1.0
+      ],
+      [
+       0,
+       1.0
+      ],
+      [
+       0,
+       0.0
+      ],
+      [
+       0.5,
+       0.0
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "unit_id": "A.012",
+    "unit_name": "Dist1b"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       1,
+       0.0
+      ],
+      [
+       1,
+       1.0
+      ],
+      [
+       0.5,
+       1.0
+      ],
+      [
+       0.5,
+       0.0
+      ],
+      [
+       1,
+       0.0
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "unit_id": "A.002",
+    "unit_name": "Dist2"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       2,
+       0.0
+      ],
+      [
+       2,
+       1.0
+      ],
+      [
+       1,
+       1.0
+      ],
+      [
+       1,
+       0.0
+      ],
+      [
+       2,
+       0.0
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "unit_id": "A.003",
+    "unit_name": "Dist3"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       3,
+       0.0
+      ],
+      [
+       3,
+       1.0
+      ],
+      [
+       2,
+       1.0
+      ],
+      [
+       2,
+       0.0
+      ],
+      [
+       3,
+       0.0
+      ]
+     ]
+    ]
+   }
+  }
+ ]
+}

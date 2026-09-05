@@ -1,0 +1,107 @@
+{
+ "type": "FeatureCollection",
+ "features": [
+  {
+   "type": "Feature",
+   "properties": {
+    "unit_id": "R.011",
+    "unit_name": "Giver"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       0.7,
+       0.0
+      ],
+      [
+       0.7,
+       1.0
+      ],
+      [
+       0,
+       1.0
+      ],
+      [
+       0,
+       0.0
+      ],
+      [
+       0.7,
+       0.0
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "unit_id": "R.012",
+    "unit_name": "Taker"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       2,
+       0.0
+      ],
+      [
+       2,
+       1.0
+      ],
+      [
+       0.7,
+       1.0
+      ],
+      [
+       0.7,
+       0.0
+      ],
+      [
+       2,
+       0.0
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "unit_id": "R.003",
+    "unit_name": "Idle"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       3,
+       0.0
+      ],
+      [
+       3,
+       1.0
+      ],
+      [
+       2,
+       1.0
+      ],
+      [
+       2,
+       0.0
+      ],
+      [
+       3,
+       0.0
+      ]
+     ]
+    ]
+   }
+  }
+ ]
+}

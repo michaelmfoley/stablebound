@@ -1,0 +1,6 @@
+event_year,event_type,parent_id,parent_name,child_id,child_name
+2014,Split,E.001,Alpha,E.011,Alpha North
+2014,Split,E.001,Alpha,E.012,Alpha South
+2016,NameChange,E.003,Charlie,E.003,Charlie Renamed
+2018,Merge,E.004,Delta,E.013,DeltaEcho
+2018,Merge,E.005,Echo,E.013,DeltaEcho

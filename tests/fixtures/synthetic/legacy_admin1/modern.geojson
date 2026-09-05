@@ -1,0 +1,141 @@
+{
+ "type": "FeatureCollection",
+ "features": [
+  {
+   "type": "Feature",
+   "properties": {
+    "unit_id": "XX.ADM1.00005",
+    "unit_name": "Alpha North"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       0.5,
+       0.0
+      ],
+      [
+       0.5,
+       1.0
+      ],
+      [
+       0,
+       1.0
+      ],
+      [
+       0,
+       0.0
+      ],
+      [
+       0.5,
+       0.0
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "unit_id": "XX.ADM1.00006",
+    "unit_name": "Alpha South"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       1,
+       0.0
+      ],
+      [
+       1,
+       1.0
+      ],
+      [
+       0.5,
+       1.0
+      ],
+      [
+       0.5,
+       0.0
+      ],
+      [
+       1,
+       0.0
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "unit_id": "XX.ADM1.00008",
+    "unit_name": "BravoDelta"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       3,
+       0.0
+      ],
+      [
+       3,
+       1.0
+      ],
+      [
+       1,
+       1.0
+      ],
+      [
+       1,
+       0.0
+      ],
+      [
+       3,
+       0.0
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "unit_id": "XX.ADM1.00003",
+    "unit_name": "Charlton"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       4,
+       0.0
+      ],
+      [
+       4,
+       1.0
+      ],
+      [
+       3,
+       1.0
+      ],
+      [
+       3,
+       0.0
+      ],
+      [
+       4,
+       0.0
+      ]
+     ]
+    ]
+   }
+  }
+ ]
+}

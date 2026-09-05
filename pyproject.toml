@@ -1,0 +1,158 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "stablebound"
+version = "0.1.5"
+description = "Reproducible framework for harmonizing subnational data across administrative boundary changes."
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.10"
+authors = [
+    { name = "Michael M. Foley" },
+]
+keywords = ["administrative-boundaries", "spatial-harmonization", "agriculture", "crop-statistics"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: GIS",
+]
+# Upper bounds are deliberate. The pipeline leans on pandas groupby/merge
+# semantics and shapely 2.x geometry predicates; a major release of either has
+# broken us before it was noticed. Raise a bound only after the suite is green
+# against the new major.
+dependencies = [
+    "pandas>=1.4,<3",
+    "numpy>=1.23,<3",
+    "geopandas>=0.13,<2",
+    "shapely>=2.0,<3",
+    "openpyxl>=3.1,<4",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+    "ruff>=0.6",
+    # pandas-stubs is what makes mypy's DataFrame reporting meaningful at all;
+    # without it every pandas call is Any and the check proves nothing.
+    "mypy>=1.8",
+    "pandas-stubs",
+    "jupyter",
+]
+analysis = [
+    "Rbeast>=0.1.20",
+]
+
+[project.urls]
+Homepage = "https://github.com/michaelmfoley/stablebound"
+Repository = "https://github.com/michaelmfoley/stablebound"
+Documentation = "https://github.com/michaelmfoley/stablebound/tree/main/docs"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+stablebound = [
+    "py.typed",
+    # India is the only bundled country; the wheel carries what the
+    # StableBound India paper describes.
+    "data/IN/lineage.*",
+    "data/IN/lineage_adm1.*",
+    "data/IN/baseline.*",
+    "data/IN/name_change_log.*",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# `slow` marks tests that run a full product over a bundled real country
+# (seconds to minutes) rather than a synthetic fixture. CI runs everything;
+# `pytest -m "not slow"` is the fast inner loop.
+markers = [
+    "slow: exercises the bundled India lineage end to end",
+]
+# --strict-markers turns a typo'd marker into an error instead of a silently
+# unfiltered test. Warnings are NOT errors here: the package uses UserWarning
+# as a first-class diagnostic channel (late reporting, homonyms, dropped
+# rows), and several tests assert those warnings fire.
+addopts = "--strict-markers"
+
+[tool.ruff]
+# 100 rather than 88: the algorithm modules carry long descriptive names
+# (`alive_members_by_year_sid`, `n_individual_observations`) and wrapping them
+# harder hurts more than it helps. Only 7 lines in src/ exceed 100 today.
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W"]
+
+[tool.ruff.lint.per-file-ignores]
+# Verbatim port of the legacy India stats matcher (moved into the package
+# 2026-07 with only determinism fixes). Reflowing it now would bury the
+# real diff when its generic parts are lifted into `match.py`; revisit
+# this ignore once that lift lands.
+"src/stablebound/india/matcher.py" = ["E501"]
+# Scripts, not library code. Each begins with a `sys.path.insert` preamble
+# before importing `stablebound` (E402), and carries long literal paths,
+# expected-output tables, and report strings (E501). `rt` / `mb` bindings
+# in tests are constructed for their validation side effects (F841).
+"tests/**" = ["E501", "E402", "F841"]
+"examples/**" = ["E501", "E402"]
+# The India data generators under tools/ carry the same script-style preambles.
+"tools/**" = ["E501", "E402", "F841", "E712", "E731"]
+# Tutorial notebook: a bare `import stablebound` cell is the intended way to
+# show a reader their install worked, so an "unused" import is the point.
+"notebooks/**" = ["E501", "E402", "F401"]
+
+[tool.mypy]
+# The package ships `py.typed`, which promises consumers that its inline
+# annotations are present and meaningful. This checks that promise rather than
+# leaving it unverified — the state the release review flagged.
+#
+# What is gated: the pure-Python core, where a type error is a real error.
+# `groups`, `dissolve`, `snapshot`, `schemas`, `io`, `assess` and `data_dict`
+# check clean today and are held there.
+#
+# What is exempted, and why: modules that work directly on DataFrames report
+# ~170 errors that are almost entirely pandas-stubs artifacts, not bugs.
+# `DataFrame.iterrows()` yields `object`, so every arithmetic or comparison on
+# a row value is an error; `.get()` returns `Hashable`; `Series.apply` has a
+# narrow overload set. Silencing them individually would mean scattering
+# `cast()` and `# type: ignore` through the algorithm modules — real cost to
+# readability for no correctness gain. One sample was checked by hand and was
+# a false positive (mypy bound a loop variable's type from an earlier loop of a
+# different dataclass).
+#
+# The exemption list is a ratchet: remove a module from it when it comes clean,
+# never add one to make a build pass.
+python_version = "3.10"
+ignore_missing_imports = true
+warn_unused_configs = true
+files = ["src/stablebound"]
+
+[[tool.mypy.overrides]]
+module = [
+    "stablebound.boundary",
+    "stablebound.breakpoint",
+    "stablebound.completeness",
+    "stablebound.fews_export",
+    "stablebound.fnid",
+    "stablebound.lineage",
+    "stablebound.lineage_class",
+    "stablebound.match",
+    "stablebound.modern",
+    "stablebound.modern_algorithm",
+    "stablebound.provenance",
+    "stablebound.reconcile",
+    "stablebound.rt_convert",
+    "stablebound.stats",
+    "stablebound.unit_defs",
+    "stablebound.validate",
+]
+ignore_errors = true

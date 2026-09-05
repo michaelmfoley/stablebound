@@ -1,0 +1,73 @@
+{
+ "type": "FeatureCollection",
+ "features": [
+  {
+   "type": "Feature",
+   "properties": {
+    "unit_id": "S.001",
+    "unit_name": "Solo"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       1,
+       0.0
+      ],
+      [
+       1,
+       1.0
+      ],
+      [
+       0,
+       1.0
+      ],
+      [
+       0,
+       0.0
+      ],
+      [
+       1,
+       0.0
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "unit_id": "S.002",
+    "unit_name": "Duo"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       2,
+       0.0
+      ],
+      [
+       2,
+       1.0
+      ],
+      [
+       1,
+       1.0
+      ],
+      [
+       1,
+       0.0
+      ],
+      [
+       2,
+       0.0
+      ]
+     ]
+    ]
+   }
+  }
+ ]
+}
