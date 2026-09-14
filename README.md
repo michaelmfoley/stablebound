@@ -141,6 +141,10 @@ ln = Lineage(
 )
 ```
 
+If your relationship table is written in names and only the baseline has
+ids, `assign_unit_ids(lineage, baseline)` mints the missing ids by replaying
+the events (see `docs/USAGE.md`, "If your lineage has names but no ids").
+
 ### Relationship table schema (canonical)
 
 Required columns (lowercased):

@@ -885,6 +885,7 @@ On India most late reports were of subtypes 2 and 3, i.e. fixable upstream, rath
 - `STATS_REQUIRED_COLUMNS` = `(unit_id, year, season, variable, value)` — `season` is **required** (no nulls — raises SchemaError)
 - `RT_REQUIRED_COLUMNS` = `(event_year, event_type, parent_id, parent_name, child_id, child_name)`
 - `BASELINE_REQUIRED_COLUMNS` = `(unit_id, name)`; `year`, `coarse_id`, `coarse_name` optional
+- Ids are required on both sides of every RT row; `assign_ids.assign_unit_ids` mints them from names when only the baseline carries ids (`docs/USAGE.md`, "If your lineage has names but no ids")
 - `VALID_EVENT_TYPES` = `{Split, Merge, Redistribute, NameChange, Coarse}`
 
 ### Where the canonical conventions live

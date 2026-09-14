@@ -113,6 +113,50 @@ ln = Lineage(
 )
 ```
 
+### If your lineage has names but no ids
+
+`Lineage` needs an id on every side of every event. When you author a
+relationship table in names ("Bihar split into Bihar and Jharkhand in
+2000") and only the baseline carries ids, let the package mint the rest:
+
+```python
+from stablebound import assign_unit_ids
+
+res = assign_unit_ids("my_country/lineage_names_only.csv",
+                      "my_country/baseline.csv",
+                      name_change_log="my_country/name_changes.xlsx")  # optional
+print(res.report())          # what was minted, what was resolved, any warnings
+res.write("my_country/")     # lineage.csv, baseline.csv, [name_change_log.csv], report
+```
+
+The id format is read off the baseline (`IN.ADM2.00001` gives the prefix
+`IN.ADM2.` and five digits). The events are replayed in order: a parent is
+looked up by name (and coarse name, when present) among the units alive at
+the start of its year; every child of a `Split` / `Merge` / `Redistribute`
+gets the next unused number, one id per child name per year however many
+parent rows feed it; `NameChange` and `Coarse` keep the parent's id. Renames
+in the name-change log take part in the replay, so a later event may use the
+new name.
+
+By default (`mode="fill"`) ids already present are kept and only blank cells
+are minted, so adding a newly discovered event later costs one id and moves
+nothing else. `mode="rebuild"` discards every non-baseline id and re-mints
+chronologically, which gives dense numbering at the cost of renumbering
+everything after an insertion.
+
+Coarse ids (`parent_coarse_id` / `child_coarse_id`) are resolved, never
+minted: from the baseline's `coarse_id` / `coarse_name` columns, and, when
+the coarse level changes too, from an already id'd coarse lineage passed as
+`coarse_lineage=` (India: `lineage_adm1.xlsx`, so a district moving into
+Jharkhand in 2000 is attached to Jharkhand's new id). For such a country run
+the helper on the coarse level first, then on the fine level.
+
+Two living units with one name (India has two Bijapurs) are told apart by
+the coarse name; without one the helper refuses rather than guesses, and a
+name that matches nothing is reported with the nearest living names. All
+failures are collected into one `IdAssignmentError` so a lineage with twenty
+typos is one round trip.
+
 Before running a product you must attach a modern shapefile. The
 package provides a human-in-the-loop matcher:
 

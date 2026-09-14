@@ -4,6 +4,22 @@ The public repository begins at the 0.1.5 root commit; entries below it record
 the development history and refer to tags that exist only in the authors'
 private archive.
 
+## Unreleased
+
+### Added
+
+- `assign_unit_ids` (module `stablebound.assign_ids`): mint canonical unit
+  ids for a relationship table authored in names, given a baseline whose
+  ids are already right. The id format is inferred from the baseline; events
+  are replayed in order (territorial children get fresh ids, one per child
+  name per year; `NameChange` / `Coarse` keep the parent's id); the
+  name-change log takes part in the replay; coarse ids are resolved from
+  the baseline and, optionally, an already id'd coarse lineage. `mode="fill"`
+  (default) keeps existing ids and mints only blanks; `mode="rebuild"`
+  re-mints every non-baseline id chronologically. Pinned by the synthetic
+  registry (blank, re-mint, same snapshots and groups) and by the bundled
+  India files (blank every id, recover the same history).
+
 ## 0.1.5
 
 ### Removed — the repository is now India-only, not just the wheel

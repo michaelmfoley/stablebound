@@ -25,7 +25,9 @@ administrative-boundary changes. Given:
   (NameChange, Coarse).
 - A **modern shapefile** of today's geometry.
 - An optional **baseline snapshot** of units alive at the analysis-window
-  start year.
+  start year. (A relationship table authored in names, with ids only in the
+  baseline, can be completed with `assign_unit_ids`; see `docs/USAGE.md`,
+  "If your lineage has names but no ids".)
 - An optional **long-form statistics table** keyed on those unit IDs.
 
 it produces TWO mutually-consistent outputs:

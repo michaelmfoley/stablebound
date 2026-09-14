@@ -10,6 +10,7 @@ for the source-tour reference.
 from __future__ import annotations
 
 from .assess import ReadinessReport, assess_country, detect_dialect
+from .assign_ids import IdAssignment, IdAssignmentError, assign_unit_ids
 from .boundary import StableBoundary
 from .data import BUNDLED_COUNTRIES, BundledCountry
 from .data_dict import DataDictionary
@@ -80,6 +81,9 @@ __all__ = [
     "assess_country",
     "ReadinessReport",
     "detect_dialect",
+    "assign_unit_ids",
+    "IdAssignment",
+    "IdAssignmentError",
     "StableBoundary",
     "ModernBoundary",
     "Lineage",
