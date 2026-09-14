@@ -52,7 +52,7 @@ Directly from GitHub, pinned to a release tag:
 pip install "git+https://github.com/michaelmfoley/stablebound.git@v0.1.5"
 ```
 
-A wheel and sdist for each release are also attached to the Zenodo deposit of
+A wheel and sdist for each release will also be attached to the Zenodo deposit of
 the India dataset (see the `stablebound-india` repository).
 
 For development, from a local clone:
@@ -130,7 +130,7 @@ sb.get_stats(variable="yield_mt_ha", year=2018)
 
 `Lineage("IN")` loads the bundled India data from `src/stablebound/data/IN/`
 (see `stablebound.BUNDLED_COUNTRIES["IN"].notes` for coverage and provenance).
-India is the only bundled country. To bring your own, supply paths:
+India is the only bundled country for now (others to come). To bring your own, supply paths:
 
 ```python
 ln = Lineage(
