@@ -59,20 +59,3 @@ sha256 = "e71c10ee8761c4c35dbb2d898a849fc858916dedd9e305e798eaa99627183140"
 description = "India modern district geometry (Geolocet, labelled 2023, data is 2024)"
 path = "data/india/boundaries/modified_shapefiles/India_Geolocet_2023_simplified/India_admin_level_5_geolocet.shp"
 sha256 = "79dc53d72fa198bf81374a209d8c8742d92b8bbd0267775b1ca766f1b1e6401c"
-
-[source.india_upload_agstats]
-# Pinned 2026-09-02. This file was NOT pinned, and that is why its rename went
-# unseen: IN_AgStats_04May2026.xlsx became IN_AgStats_27July2026.xlsx on
-# 2026-07-27, run_deliverables.py still named the May file, and the step
-# crashed for 37 days. `run_all` is not in CI -- every source here lives
-# outside the repo -- so the 0.2s `python -m regression.paths` preflight is the
-# guard that would have caught it, and it could not, because nothing pinned it.
-description = "Frozen India FEWS AgStats workbook (regression target)"
-path = "stablebound-analysis/india_temp/upload_ready/IN_AgStats_27July2026.xlsx"
-sha256 = "5d5dceec83331cf5bd3440bb692f72b5fc3bed5dd7e774f045f28e865019a4e2"
-
-[source.india_upload_ready]
-description = "Frozen India FEWS reference bundle (regression target)"
-path = "stablebound-analysis/india_temp/upload_ready/IN_GeographicUnitRelationship.csv"
-sha256 = "04f8d005c086aac5f6dfd33eff7e6dc3fa6cab5fe02bd69a46125f9a3047b76c"
-columns = ["relationship_type", "fnid_from_unit"]
