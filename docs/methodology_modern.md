@@ -1,4 +1,4 @@
-# StableBound — Modern Boundary Algorithm
+# StableBound — Modern Boundary Algorithm [EXPERIMENTAL]
 
 The narrative reference for the modern boundary product. Pairs with
 [`methodology.md`](methodology.md) (the stable boundary's algorithm
