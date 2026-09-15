@@ -299,6 +299,39 @@ def test_india_full_rebuild_reproduces_the_bundled_history(india):
     assert len(res.warnings) == 1 and "Bijapur" in res.warnings[0]
 
 
+def test_india_rebuild_places_the_bijapur_rename_when_the_log_names_the_state(india):
+    """The log row renaming Karnataka's Bijapur carries no state; with a
+    coarse_name column it resolves, and the rebuild is warning-free."""
+    rt = india["rt"].copy()
+    rt[["parent_id", "child_id"]] = None
+    ncl = india["ncl"].copy()
+    ncl["coarse_name"] = None
+    row = (ncl["event_year"] == 2014) & (ncl["old_name"] == "Bijapur")
+    ncl.loc[row, "coarse_name"] = "Karnataka"
+    res = assign_unit_ids(rt, india["base"], name_change_log=ncl,
+                          coarse_lineage=india["adm1"], mode="rebuild")
+    assert not res.warnings
+    # Karnataka's Bijapur is the 1997 split child; whatever id the rebuild
+    # minted for it is the id the log row must now carry.
+    split = res.lineage[(res.lineage["event_year"] == 1997)
+                        & (res.lineage["child_name"] == "Bijapur")]
+    assert res.name_change_log.loc[row, "unit_id"].tolist() == split["child_id"].tolist()
+
+
+def test_log_rows_use_the_coarse_name_to_tell_homonyms_apart():
+    base = get_synthetic("homonym_coarse").baseline_df()   # two Springfields
+    rt = _springfield_split(with_coarse=True).iloc[:0]     # no events, right columns
+    log = pd.DataFrame([{"event_year": 2012, "unit_id": None, "old_name": "Springfield",
+                         "new_name": "Springfield-on-Sea", "coarse_name": "North"}])
+    res = assign_unit_ids(rt, base, name_change_log=log)
+    assert res.name_change_log.loc[0, "unit_id"] == "H.001"
+    assert not res.warnings
+    bare = assign_unit_ids(rt, base, name_change_log=log.drop(columns="coarse_name"))
+    assert bare.name_change_log.loc[0, "unit_id"] is None or pd.isna(
+        bare.name_change_log.loc[0, "unit_id"])
+    assert any("ambiguous" in w and "coarse_name" in w for w in bare.warnings)
+
+
 def test_india_same_year_rename_then_split_resolves_by_the_new_name(india):
     """Jyotiba Phule Nagar became Amroha in 2012 and split as Amroha in 2012."""
     rt = india["rt"].copy()

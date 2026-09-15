@@ -18,7 +18,11 @@ read them afterwards:
 * one child name in one year under one coarse unit is one id, however
   many parent rows feed it (multi-parent merges and redistributes);
 * ``NameChange`` and ``Coarse`` keep the parent's id, as the schema
-  requires (``parent_id == child_id``).
+  requires (``parent_id == child_id``);
+* a name shared by two living units is told apart by the coarse name —
+  the row's coarse columns for the relationship table, an optional
+  ``coarse_name`` column for the name-change log — and refused, never
+  guessed, when nothing tells them apart.
 
 Two modes. ``"fill"`` (the default) trusts every id already present and
 mints only for blank cells, so inserting a newly discovered event into
@@ -454,9 +458,11 @@ def assign_unit_ids(
         baseline: baseline snapshot with ``unit_id`` and ``name`` filled;
             ``coarse_id`` / ``coarse_name`` when the country has a coarse level.
         name_change_log: optional log (``event_year, unit_id, old_name,
-            new_name`` [, ``level``]); blank ``unit_id`` cells are filled and
-            the renames take part in the replay so later events may use the
-            new name.
+            new_name`` [, ``level``, ``coarse_name``]); blank ``unit_id``
+            cells are filled and the renames take part in the replay so
+            later events may use the new name. ``coarse_name`` tells apart
+            two living units that share the old name (India's two Bijapurs);
+            without it such a row is left blank with a warning.
         coarse_lineage: optional, already id'd relationship table of the
             coarse level, used to resolve coarse names year by year.
         mode: ``"fill"`` keeps existing ids and mints only for blanks;
@@ -492,7 +498,10 @@ def assign_unit_ids(
     my_level: int | None = int(level_match.group(1)) if level_match else None
 
     has_coarse_cols = all(c in rt.columns for c in RT_OPTIONAL_COLUMNS)
-    use_coarse = has_coarse_cols and "coarse_name" in base.columns
+    # Coarse names can tell homonyms apart wherever the baseline files units
+    # under a coarse unit: relationship-table rows supply theirs through the
+    # coarse columns, name-change-log rows through an optional coarse_name.
+    use_coarse = "coarse_name" in base.columns
     id_cols = ["parent_id", "child_id"] + (
         ["parent_coarse_id", "child_coarse_id"] if has_coarse_cols else []
     )
@@ -545,6 +554,7 @@ def assign_unit_ids(
             rec["unit_id"] = _clean(rec.get("unit_id"))
             rec["old_name"] = _clean(rec.get("old_name"))
             rec["new_name"] = _clean(rec.get("new_name"))
+            rec["coarse_name"] = _clean(rec.get("coarse_name"))
             ncl_rows.append(rec)
     if mode == "rebuild":
         # The log's ids for this level follow the numbering being discarded;
@@ -621,7 +631,7 @@ def assign_unit_ids(
                 warnings.append(f"name-change row {rec['_label']} ({year}): old or new name blank")
                 continue
             if uid is None:
-                cands, _ = alive.candidates(old, None)
+                cands, _ = alive.candidates(old, rec["coarse_name"])
                 if len(cands) != 1:
                     deferred_ncl.append(rec)
                     continue
@@ -760,15 +770,18 @@ def assign_unit_ids(
         for rec in deferred_ncl:
             old, new, uid = rec["old_name"], rec["new_name"], rec["unit_id"]
             if uid is None:
-                living, _ = alive.candidates(str(old), None)
+                want_coarse = rec["coarse_name"]
+                living, _ = alive.candidates(str(old), want_coarse)
                 cands = living if len(living) > 1 else sorted(
-                    cid for cid, (nm, _) in children.items() if norm(nm) == norm(str(old))
+                    cid for cid, (nm, co) in children.items()
+                    if norm(nm) == norm(str(old))
+                    and (want_coarse is None or co is None or norm(co) == norm(want_coarse))
                 )
                 if len(cands) != 1:
                     warnings.append(
                         f"name-change row {rec['_label']} ({year}): {old!r} "
                         + ("is ambiguous among " + str(cands)
-                           + "; fill unit_id on that row" if cands else
+                           + "; add a coarse_name to the row, or its unit_id" if cands else
                            "matches no living unit; unit_id left blank")
                     )
                     continue

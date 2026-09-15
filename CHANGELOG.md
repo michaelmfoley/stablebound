@@ -13,8 +13,10 @@ private archive.
   ids are already right. The id format is inferred from the baseline; events
   are replayed in order (territorial children get fresh ids, one per child
   name per year; `NameChange` / `Coarse` keep the parent's id); the
-  name-change log takes part in the replay; coarse ids are resolved from
-  the baseline and, optionally, an already id'd coarse lineage. `mode="fill"`
+  name-change log takes part in the replay (an optional `coarse_name`
+  column in the log tells apart two living units with one old name); coarse
+  ids are resolved from the baseline and, optionally, an already id'd
+  coarse lineage. `mode="fill"`
   (default) keeps existing ids and mints only blanks; `mode="rebuild"`
   re-mints every non-baseline id chronologically. Pinned by the synthetic
   registry (blank, re-mint, same snapshots and groups) and by the bundled

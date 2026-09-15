@@ -152,10 +152,12 @@ Jharkhand in 2000 is attached to Jharkhand's new id). For such a country run
 the helper on the coarse level first, then on the fine level.
 
 Two living units with one name (India has two Bijapurs) are told apart by
-the coarse name; without one the helper refuses rather than guesses, and a
-name that matches nothing is reported with the nearest living names. All
-failures are collected into one `IdAssignmentError` so a lineage with twenty
-typos is one round trip.
+the coarse name: the coarse columns of a relationship-table row, or an
+optional `coarse_name` column in the name-change log. Without one the
+helper refuses rather than guesses (a log row is left blank with a
+warning), and a name that matches nothing is reported with the nearest
+living names. All table failures are collected into one
+`IdAssignmentError` so a lineage with twenty typos is one round trip.
 
 Before running a product you must attach a modern shapefile. The
 package provides a human-in-the-loop matcher:
