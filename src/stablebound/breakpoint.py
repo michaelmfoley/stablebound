@@ -131,30 +131,44 @@ class BreakpointResult:
 DEFAULT_MCMC_SEED = 1
 
 
+#: How a gap in a series reaches BEAST. ``"interpolate"`` (the default, and what
+#: every published number was computed with) fills missing years linearly on the
+#: regular annual grid, extending the ends; ``"native"`` hands the grid to BEAST
+#: with the gaps as NaN and lets its sampler treat them as missing, which Rbeast
+#: supports. The grid itself is a choice, not a constraint: BEAST accepts missing
+#: values, and the interpolated default exists so that every series has the same
+#: time base. Use ``"native"`` to measure what that choice costs.
+MISSING_MODES = ("interpolate", "native")
+
+
 def _beast_one_series(
-    years: np.ndarray, values: np.ndarray, mcmc_seed: int = DEFAULT_MCMC_SEED
+    years: np.ndarray,
+    values: np.ndarray,
+    mcmc_seed: int = DEFAULT_MCMC_SEED,
+    missing: str = "interpolate",
 ) -> np.ndarray:
     """Run BEAST on one series. Returns per-year posterior of being a changepoint.
 
-    The input series is interpolated to a regular annual grid spanning
-    ``years.min()..years.max()``; the returned posterior is restricted
-    back to the input years (i.e. years that were originally NaN /
-    missing get the interpolated-grid posterior, but the caller is
-    expected to filter to data-present years if desired).
+    The input series is placed on a regular annual grid spanning
+    ``years.min()..years.max()``. With ``missing="interpolate"`` the gaps are
+    filled linearly (ends extended); with ``missing="native"`` they stay NaN
+    and BEAST handles them as missing values. Either way the returned posterior
+    is restricted back to the input years.
     """
     import Rbeast as rb  # lazy
 
+    if missing not in MISSING_MODES:
+        raise ValueError(f"missing must be one of {MISSING_MODES}, got {missing!r}")
     y_min, y_max = int(years.min()), int(years.max())
     full_years = np.arange(y_min, y_max + 1)
     series = pd.Series(values, index=years).reindex(full_years)
-    # BEAST does not accept NaNs in y. Linear-interpolate then bfill/ffill
-    # for any leading/trailing NaNs.
-    series = series.interpolate(limit_direction="both")
+    if missing == "interpolate":
+        series = series.interpolate(limit_direction="both")
     out = rb.beast(
         series.values,
         season="none",
         quiet=True,
-        print_options=False,
+        print_param=False,
         print_progress=False,
         mcmc_seed=mcmc_seed,
     )
@@ -172,6 +186,7 @@ def analyze_breakpoints(
     season_filter: str | None = "Total Year",
     min_years: int = 8,
     mcmc_seed: int = DEFAULT_MCMC_SEED,
+    missing: str = "interpolate",
 ) -> BreakpointResult:
     """Run BEAST changepoint detection on each (group_cols) timeseries.
 
@@ -203,16 +218,23 @@ def analyze_breakpoints(
         and no result built on it reproduces. Pass ``0`` for BEAST's own
         random seeding; vary it deliberately to measure how much of a
         reported breakpoint count is sampling noise.
+    missing : {"interpolate", "native"}, default ``"interpolate"``
+        How a missing year inside a series reaches BEAST: filled linearly on
+        the regular annual grid (the default, which every published number
+        used), or handed to BEAST as NaN for its own missing-value handling.
+        See ``MISSING_MODES``.
 
     Returns
     -------
     BreakpointResult
     """
     group_cols = tuple(group_cols)
-    missing = [c for c in (*group_cols, year_col, value_col) if c not in stats.columns]
-    if missing:
+    if missing not in MISSING_MODES:
+        raise ValueError(f"missing must be one of {MISSING_MODES}, got {missing!r}")
+    absent = [c for c in (*group_cols, year_col, value_col) if c not in stats.columns]
+    if absent:
         raise ValueError(
-            f"stats is missing required columns {missing}. "
+            f"stats is missing required columns {absent}. "
             f"Have: {list(stats.columns)}."
         )
 
@@ -244,7 +266,7 @@ def analyze_breakpoints(
         if len(years) < min_years:
             continue
         try:
-            posteriors = _beast_one_series(years, values, mcmc_seed=mcmc_seed)
+            posteriors = _beast_one_series(years, values, mcmc_seed=mcmc_seed, missing=missing)
         except Exception:
             # Any individual BEAST failure is logged via skipping; we
             # don't want one bad series to abort the whole sweep.

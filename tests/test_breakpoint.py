@@ -155,6 +155,49 @@ def test_same_seed_reproduces_posteriors():
     pd.testing.assert_frame_equal(first.per_series, second.per_series)
 
 
+def test_native_missing_mode_hands_the_gap_to_beast():
+    """A series with a gap runs in both missing-value modes and returns one posterior
+    per OBSERVED year either way; the native mode never interpolates.
+
+    Interpolation is the published default; the native mode exists to measure what
+    that choice costs, so it has to be a real alternative, not a synonym.
+    """
+    from stablebound import breakpoint as bp
+
+    df = _step_series("A", "rice", step_year=2012)
+    df = df[~df["year"].isin([2006, 2007, 2017])]          # three missing years
+    interpolated = analyze_breakpoints(df, value_col="value", mcmc_seed=3).per_series
+    native = analyze_breakpoints(df, value_col="value", mcmc_seed=3, missing="native").per_series
+    assert list(interpolated["year"]) == list(native["year"]) == sorted(df["year"])
+    assert np.isfinite(native["posterior"]).all()
+    assert not np.allclose(interpolated["posterior"], native["posterior"]), \
+        "the two modes returned the same posteriors, so the gap was not treated differently"
+    # The step is still found without interpolation.
+    peak = int(native.set_index("year")["posterior"].idxmax())
+    assert abs(peak - 2012) <= 1
+
+    called = {}
+    original = pd.Series.interpolate
+
+    def spy(self, *args, **kwargs):
+        called["yes"] = True
+        return original(self, *args, **kwargs)
+
+    pd.Series.interpolate = spy
+    try:
+        bp._beast_one_series(df["year"].to_numpy(), df["value"].to_numpy(dtype=float),
+                             mcmc_seed=3, missing="native")
+    finally:
+        pd.Series.interpolate = original
+    assert "yes" not in called
+
+
+def test_unknown_missing_mode_raises():
+    df = _step_series("A", "rice", step_year=2012)
+    with pytest.raises(ValueError, match="missing must be one of"):
+        analyze_breakpoints(df, value_col="value", missing="drop")
+
+
 def test_different_seeds_move_posteriors():
     """The guard above is only worth having if the seed is doing something.
 

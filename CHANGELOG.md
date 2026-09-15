@@ -8,6 +8,12 @@ private archive.
 
 ### Added
 
+- `analyze_breakpoints(..., missing="native")`: hand BEAST the regular annual
+  grid with its gaps as NaN instead of interpolating them (the default,
+  `"interpolate"`, is unchanged and is what every published number used).
+  Rbeast accepts missing values; the grid is a choice, not a constraint, and
+  the option exists to measure what the choice costs. Also passes Rbeast's
+  `print_param` instead of a `print_options` keyword it never had.
 - `assign_unit_ids` (module `stablebound.assign_ids`): mint canonical unit
   ids for a relationship table authored in names, given a baseline whose
   ids are already right. The id format is inferred from the baseline; events
