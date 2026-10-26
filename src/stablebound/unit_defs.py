@@ -30,7 +30,7 @@ Public API:
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Iterable
+from typing import Callable, Iterable
 
 import pandas as pd
 
@@ -116,19 +116,18 @@ def build_admin1_attribution_table(
         return pd.DataFrame(rows)
 
     for year, events_y in ev.groupby("event_year"):
+        is_terr = events_y["event_type"].isin(territorial_types)
         # First, drop parents of territorial events (they cease).
-        for _, row in events_y.iterrows():
-            if row["event_type"] in territorial_types:
-                pid = str(row["parent_id"])
-                cid_unit = str(row["child_id"])
-                # Only drop if the parent isn't reused as the child (rare,
-                # but safe — NameChange has parent_id == child_id and is
-                # excluded from this branch anyway).
-                if pid != cid_unit and pid in state:
-                    del state[pid]
+        for _, row in events_y[is_terr].iterrows():
+            pid = str(row["parent_id"])
+            cid_unit = str(row["child_id"])
+            # Only drop if the parent isn't reused as the child (rare,
+            # but safe — NameChange has parent_id == child_id and is
+            # excluded from this branch anyway).
+            if pid != cid_unit and pid in state:
+                del state[pid]
 
-        # Then, apply the post-event admin1 of each child.
-        for _, row in events_y.iterrows():
+        def _apply(row: pd.Series) -> None:
             cid_unit = str(row["child_id"])
             child_admin1_id = row.get("child_coarse_id")
             child_admin1_name = row.get("child_coarse_name")
@@ -136,13 +135,31 @@ def build_admin1_attribution_table(
                 # Fall back to the current attribution (for events whose
                 # child_coarse_* columns are blank — shouldn't happen for
                 # India, but be safe).
-                continue
+                return
             state[cid_unit] = (
                 str(child_admin1_id),
                 str(child_admin1_name)
                 if pd.notna(child_admin1_name)
                 else str(child_admin1_id),
             )
+
+        # Then, apply the post-event admin1 of each territorial child
+        # (creations and re-mints carry the child's admin1 explicitly).
+        for _, row in events_y[is_terr].iterrows():
+            _apply(row)
+        # Finally the non-territorial rows (Coarse re-attributions,
+        # NameChange) — but only for units that are alive after this
+        # year's territorial events. Same-year order is therefore
+        # irrelevant: a unit created by a Split and moved to another
+        # admin1 in the same year ends the year under the new admin1
+        # (SLE 2017 Karene), while a Coarse row on a unit that a same-year
+        # Merge/Split consumed is a no-op instead of resurrecting it
+        # (RWA 2005). Before this, rows were applied in alphabetical
+        # event_type order and the Split's inherited admin1 overwrote the
+        # Coarse move.
+        for _, row in events_y[~is_terr].iterrows():
+            if str(row["child_id"]) in state:
+                _apply(row)
 
         # Snapshot the post-(year T) state. This represents the
         # attribution at the START of year T+1.
@@ -199,8 +216,14 @@ def build_unit_defs_table(
     year: int,
     additional_units: set[str] | None = None,
     attribution: pd.DataFrame | None = None,
+    admin1_name_of: "Callable[[str, int], str | None] | None" = None,
 ) -> pd.DataFrame:
     """Build the unit-defs DataFrame for one ``(level, year)`` pair.
+
+    ``admin1_name_of(admin1_id, year)`` (optional) supplies the admin1 name in
+    force at ``year`` — e.g. from a separately loaded admin1 lineage with its own
+    name-change log — for the ``admin1`` column at both levels. Default ``None``
+    keeps the historical behaviour (attribution/code-map names).
 
     Parameters:
         graph: LineageGraph from the package's RT.
@@ -264,12 +287,15 @@ def build_unit_defs_table(
                 # baseline + lineage are consistent. Skip with no FNID
                 # rather than silently emit a malformed one.
                 continue
+            a1_name = admin1_name.get(admin1_id, active_admin1[admin1_id])
+            if admin1_name_of is not None:
+                a1_name = admin1_name_of(admin1_id, year) or a1_name
             rows.append({
                 "FNID": build_fnid(iso, year, 1, ss),
                 "EFF_YEAR": year,
                 "COUNTRY": iso,
                 "admin0": admin0,
-                "admin1": admin1_name.get(admin1_id, active_admin1[admin1_id]),
+                "admin1": a1_name,
             })
         return pd.DataFrame(
             rows, columns=["FNID", "EFF_YEAR", "COUNTRY", "admin0", "admin1"]
@@ -313,6 +339,8 @@ def build_unit_defs_table(
             name = _name_of_unit_in_year(graph, unit_id, year) or latest_name.get(unit_id, "")
         else:
             name = latest_name.get(unit_id, "")
+        if admin1_name_of is not None:
+            a1_name = admin1_name_of(a1_id, year) or a1_name
         rows.append({
             "FNID": build_fnid(iso, year, 2, ss, dd),
             "EFF_YEAR": year,

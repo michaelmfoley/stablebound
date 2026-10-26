@@ -329,6 +329,22 @@ def _name_of_unit_in_year(graph: LineageGraph, unit: str, year: int) -> str | No
     # is "during year"; the post-event name doesn't take effect until year+1.
     past = ev[(ev["event_year"] < year) & ((ev["parent_id"] == unit) | (ev["child_id"] == unit))]
     if len(past) > 0:
+        # A NameChange row still ahead of ``year`` is the authoritative source
+        # for the name in force at ``year``: its parent_name is the pre-rename
+        # name, which applies through the rename year. This must take
+        # precedence over the latest past row, because a creation row may
+        # carry the unit's MODERN name (builders that keep one canonical name
+        # per unit and record renames only in a name-change log) — reading
+        # that row would back-date the post-rename name to the creation year
+        # (github issue #11). Under per-event naming the two sources agree.
+        future_rename = ev[
+            (ev["event_year"] >= year)
+            & (ev["event_type"] == "NameChange")
+            & (ev["parent_id"] == unit)
+        ]
+        if len(future_rename) > 0:
+            idx = future_rename["event_year"].idxmin()
+            return ev.loc[idx, "parent_name"]
         # idxmax() returns the index label of the first occurrence of the
         # max. Ties on year are broken by the input order, which is
         # preserved in our event table.

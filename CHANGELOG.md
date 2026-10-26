@@ -6,6 +6,13 @@ private archive.
 
 ## Unreleased
 
+### Fixed
+- `fews_export.build_legacy_relationship_table`: the admin2 -> admin1 attribution is now forward-filled to each vintage's package year instead of looked up by exact year, so the base vintage (and a lineage with no events) gets its admin2 hierarchy rows; before, those rows were silently absent unless an event fell in that year.
+- `unit_defs.build_admin1_attribution_table`: a year's rows are now applied territorial-first (Split/Merge/Redistribute children carry their admin1 explicitly), then Coarse/NameChange rows for units alive after them. Previously rows ran in alphabetical `event_type` order, so a same-year Coarse re-attribution of a Split child was overwritten by the child's inherited admin1 (a district created by a split and moved to a new province in the same year ended up under the old province in every unit-defs workbook). Regression tests in `tests/test_same_year_coarse_walk.py`.
+- `lineage._name_of_unit_in_year`: a NameChange row ahead of the queried year now takes precedence over the latest past row, so units whose creation row carries their modern (post-rename) name no longer get that name back-dated into pre-rename unit-defs tables (#11). Per-event naming is unaffected; regression tests in `tests/test_name_change_lookup.py`.
+
+## Unreleased
+
 ### Added
 
 - `analyze_breakpoints(..., missing="native")`: hand BEAST the regular annual

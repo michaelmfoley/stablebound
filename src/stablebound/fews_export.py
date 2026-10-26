@@ -39,7 +39,7 @@ import shutil
 import warnings
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable, Literal, Mapping, Sequence
+from typing import Callable, Iterable, Literal, Mapping, Sequence
 
 import pandas as pd
 
@@ -532,12 +532,19 @@ def build_legacy_relationship_table(
         return build_fnid(iso, vintage, lvl, ss, dd)
 
     # admin2 -> admin1 for a given package year.
+    # The attribution table has rows only at the base year and at each
+    # event year + 1, so it must be forward-filled to the package year: a
+    # base vintage with no same-year event (every country) and a lineage with
+    # no events at all (Somalia's operational 74-district frame) otherwise
+    # get no admin2 hierarchy rows, and the legacy round trip fails.
     attr: dict[int, dict[str, tuple[str, str]]] = {}
     if attribution is not None:
-        for y, sub in attribution.groupby("year"):
-            attr[int(y)] = {
+        from .unit_defs import _attribution_for_year
+
+        for v in vintages:
+            attr[v + 1] = {
                 str(u): (str(a), str(n))
-                for u, a, n in zip(sub["unit_id"], sub["admin1_id"], sub["admin1_name"])
+                for u, (a, n) in _attribution_for_year(attribution, v + 1).items()
             }
 
     # --- surrogate ids ---------------------------------------------------
@@ -743,8 +750,12 @@ def build_deliverables(
     name_style: Literal["bare", "with_country"] = "bare",
     scratch_dir: Path | str | None = None,
     legacy_relationship: bool = False,
+    admin1_name_of: "Callable[[str, int], str | None] | None" = None,
 ) -> dict[str, list[Path]]:
     """Emit all three deliverables into ``out_dir``.
+
+    ``admin1_name_of`` (optional) is forwarded to ``build_unit_defs_table`` so
+    the admin1 column carries the name in force each year (see there).
 
     ``adm2_graph`` present → an admin2 country (levels 1 and 2); ``None`` →
     admin1-only (level 1). ``admin1_graph`` supplies the admin1 *events* for the
@@ -783,6 +794,7 @@ def build_deliverables(
                 defs[lvl][y] = build_unit_defs_table(
                     graph_for_defs, baseline, cm,
                     iso=iso, admin0=admin0, level=lvl, year=y, attribution=attribution,
+                    admin1_name_of=admin1_name_of,
                 )
     else:
         # Admin1-only country: each unit is its own admin1 — no coarse layer,
