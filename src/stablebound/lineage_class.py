@@ -12,11 +12,16 @@ Construction:
     # Bundled country: zero-config.
     ln = Lineage("IN")
 
-    # Custom country: pass paths explicitly.
+    # A folder of tables with a stablebound.json beside them, as published.
+    ln = Lineage.from_folder("my_country/")
+
+    # Custom country: pass paths (and any facts) explicitly.
     ln = Lineage(
         "PT",
         relationship_table_path="my_country/rt.csv",
         baseline_path="my_country/baseline.csv",
+        admin_level=2,
+        coarse_lineage_path="my_country/rt_adm1.csv",
     )
 
 Inspection (no shapefile required):
@@ -46,13 +51,15 @@ from __future__ import annotations
 
 import logging
 import warnings
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from pathlib import Path
 from typing import Union
 
 import geopandas as gpd
 import pandas as pd
 
+from .country_folder import TABLES as _TABLES
+from .country_folder import read_country_description
 from .data import BUNDLED_COUNTRIES
 from .io import (
     merge_name_changes,
@@ -111,8 +118,46 @@ class Lineage:
         baseline_path: Path | str | None = None,
         name_change_log_path: Path | str | None = None,
         max_year: int | None = None,
+        coarse_lineage_path: Path | str | None = None,
+        admin_level: int | None = None,
+        validity_start_year: int | None = None,
+        coverage_end_year: int | None = None,
+        notes: str | None = None,
+        normalizer: Callable[[str], str] | None = None,
+        columns: Mapping[str, Mapping[str, str]] | None = None,
     ) -> None:
+        """Load a country's lineage from its files.
+
+        The country's facts — what no table states about itself — can be
+        passed with the files: ``admin_level`` (2 for a district-level
+        lineage; default 1), ``coarse_lineage_path`` (the lineage of the
+        level above, e.g. India's states), ``validity_start_year`` (from when
+        the record can be trusted), ``coverage_end_year`` (the last year the
+        source affirms the unit set), ``notes``, and ``normalizer`` (how the
+        country's names are tidied before matching). ``columns`` maps a
+        table's own headers to the canonical names, per table:
+        ``{"baseline": {"ADM2_ID": "unit_id", ...}, ...}`` with the tables
+        ``relationship_table``, ``coarse_lineage``, ``baseline`` and
+        ``name_change_log``. Matching ignores case.
+
+        :meth:`from_folder` reads all of this from a ``stablebound.json``
+        beside the tables, which is the usual way to load a published folder.
+        For a country on the built-in list, any value given here overrides
+        the built-in one.
+        """
         self.country_code = country_code.upper()
+        if admin_level is not None and (
+            isinstance(admin_level, bool) or not isinstance(admin_level, int) or admin_level < 1
+        ):
+            raise ValueError(f"admin_level must be a whole number >= 1, got {admin_level!r}")
+        self._columns: dict[str, dict[str, str]] = {}
+        for table, mapping in (columns or {}).items():
+            if table not in _TABLES:
+                raise ValueError(
+                    f"columns names unknown table {table!r}; the tables are {list(_TABLES)}"
+                )
+            self._columns[table] = dict(mapping)
+        self._normalizer: Callable[[str], str] | None = normalizer
 
         # A country either ships with the package or the caller brings their
         # own files. Which one decides everything set below.
@@ -143,6 +188,11 @@ class Lineage:
             self._admin_level: int = bundled.admin_level
             self._coarse_rt_path: Path | None = bundled.coarse_lineage_path
             self._notes: str = bundled.notes
+            # Taken now, like every other fact above, so the object does not
+            # change if the registry is edited after it was built. A
+            # normalizer the caller passed still wins.
+            if self._normalizer is None:
+                self._normalizer = bundled.normalizer
         else:
             if relationship_table_path is None:
                 raise ValueError(
@@ -150,12 +200,14 @@ class Lineage:
                     f"StableBound; relationship_table_path is required. "
                     f"Bundled countries: {sorted(BUNDLED_COUNTRIES.keys())}"
                 )
-            # A country we don't ship brings its own files, and loses
-            # everything the built-in list would have told us: when its data
-            # becomes trustworthy, when it stops, and whether a second admin
-            # level exists. Note the admin level is *assumed* to be 1 rather
-            # than worked out, so a user's own district-level country is
-            # treated as if it were state-level until they say otherwise.
+            # A country we don't ship brings its own files, and with them only
+            # what the caller states: when its data becomes trustworthy, when it
+            # stops, whether a second admin level exists. Anything not stated
+            # falls back to the defaults below. Note the admin level is
+            # *assumed* to be 1 rather than worked out, so a district-level
+            # country is read as state-level unless the caller passes
+            # admin_level (or loads it with from_folder, whose stablebound.json
+            # says so).
             self._rt_path = Path(relationship_table_path)
             self._baseline_path = Path(baseline_path) if baseline_path else None
             self._ncl_path = Path(name_change_log_path) if name_change_log_path else None
@@ -165,6 +217,27 @@ class Lineage:
             self._coarse_rt_path = None
             self._notes = ""
 
+        # Facts the caller states win over both of the defaults above: the
+        # built-in list's (so a corrected value can be tried without editing
+        # the package) and the bare assumptions made for a country we don't
+        # ship (so a district-level country is not read as state-level).
+        if admin_level is not None:
+            self._admin_level = admin_level
+        if coarse_lineage_path is not None:
+            self._coarse_rt_path = Path(coarse_lineage_path)
+        if validity_start_year is not None:
+            self._validity_start_year = validity_start_year
+        if coverage_end_year is not None:
+            self._coverage_end_year = coverage_end_year
+        if notes is not None:
+            self._notes = notes
+        if coarse_lineage_path is not None and self._admin_level < 2:
+            raise ValueError(
+                f"coarse_lineage_path is given but admin_level is {self._admin_level}; a "
+                "coarse lineage describes the level above the working one, so it needs "
+                "admin_level >= 2."
+            )
+
         # Files aren't read until they're needed, but check now that they
         # exist. A mistyped path should complain here rather than surfacing
         # much later, inside whatever step happened to need it first.
@@ -172,6 +245,7 @@ class Lineage:
             ("relationship_table_path", self._rt_path),
             ("baseline_path", self._baseline_path),
             ("name_change_log_path", self._ncl_path),
+            ("coarse_lineage_path", self._coarse_rt_path),
         ):
             if p is not None and not p.exists():
                 raise FileNotFoundError(f"{label} not found: {p}")
@@ -261,6 +335,11 @@ class Lineage:
         obj._baseline_path = None
         obj._ncl_path = ncl_path
         obj._init_lazy_state()
+        # Set here because __init__ never runs for this object. The legacy RT
+        # is already in canonical columns once converted, and carries no
+        # country-specific name rules.
+        obj._columns = {}
+        obj._normalizer = None
         obj._admin_level = admin_level
         obj._coarse_rt_path = None
         obj._validity_start_year = (
@@ -299,18 +378,39 @@ class Lineage:
         obj._shapefile_issues = None
         return obj
 
+    @classmethod
+    def from_folder(cls, folder: Path | str, *, max_year: int | None = None) -> "Lineage":
+        """Load a folder of relationship tables as it is shipped.
+
+        The folder holds the tables in whatever names and headers its
+        maintainer uses, plus a ``stablebound.json`` that says which file is
+        which, how the headers map to the canonical columns, and the
+        country's facts (admin level, validity and coverage years, notes,
+        name-tidying rules). See :mod:`stablebound.country_folder` for the
+        format. ``folder`` may also be the path of the JSON file itself.
+
+        This is the same as calling :class:`Lineage` with every keyword the
+        description supplies; nothing is converted or copied.
+        """
+        desc = read_country_description(folder)
+        return cls(desc.country_code, max_year=max_year, **desc.lineage_kwargs())
+
     # --- Lazy data loads -------------------------------------------------
 
     @property
     def relationship_table(self) -> pd.DataFrame:
         """Canonical relationship table. Name changes already merged in."""
         if self._relationship_table is None:
-            rt = read_relationship_table(self._rt_path)
+            rt = read_relationship_table(
+                self._rt_path, columns=self._columns.get("relationship_table")
+            )
             # Fold the name change log into the RT as NameChange rows so
             # the resulting LineageGraph sees them in one place. A country
             # may ship without a separate NCL.
             if self._ncl_path is not None:
-                ncl = read_name_change_log(self._ncl_path)
+                ncl = read_name_change_log(
+                    self._ncl_path, columns=self._columns.get("name_change_log")
+                )
                 self._name_change_log = ncl
                 rt = merge_name_changes(rt, ncl)
             self._relationship_table = rt
@@ -336,6 +436,7 @@ class Lineage:
         self._baseline = read_baseline(
             self._baseline_path,
             base_year=self._validity_start_year,
+            columns=self._columns.get("baseline"),
         )
         return self._baseline
 
@@ -395,7 +496,9 @@ class Lineage:
         # because a country may keep both levels' renames in one file and a
         # state's rename means nothing to a district.
         if self._coarse_lineage is None:
-            rt = read_relationship_table(self._coarse_rt_path)
+            rt = read_relationship_table(
+                self._coarse_rt_path, columns=self._columns.get("coarse_lineage")
+            )
             ncl = self._ncl_for_level(level)
             if ncl is not None and len(ncl):
                 rt = merge_name_changes(rt, ncl)
@@ -515,8 +618,9 @@ class Lineage:
     def coverage_end_year(self) -> int | None:
         """Last year the source data affirms this country's unit set.
 
-        ``None`` for custom countries — the package cannot know how current a
-        user-supplied lineage is. See
+        ``None`` for a custom country unless the caller states it
+        (``coverage_end_year=`` or a ``stablebound.json``) — the package cannot
+        know how current a user-supplied lineage is. See
         :attr:`stablebound.data.BundledCountry.coverage_end_year`.
         """
         return self._coverage_end_year
@@ -577,17 +681,18 @@ class Lineage:
 
     @property
     def validity_start_year(self) -> int | None:
-        """Earliest year for which the bundled product is valid.
+        """Earliest year for which the product is valid.
 
-        For bundled countries, comes from
-        :data:`stablebound.BUNDLED_COUNTRIES`. For custom countries
-        this is ``None`` (the package can't infer it).
+        As stated by the caller (``validity_start_year=`` or a
+        ``stablebound.json``); otherwise, for bundled countries, from
+        :data:`stablebound.BUNDLED_COUNTRIES`. Otherwise ``None`` (the
+        package can't infer it).
         """
         return self._validity_start_year
 
     @property
     def notes(self) -> str:
-        """Free-text notes from the bundled-country registry, if any."""
+        """Free-text notes: the caller's, else the bundled registry's, else ``""``."""
         return self._notes
 
     @property
@@ -705,17 +810,21 @@ class Lineage:
     def _resolve_normalizer(
         self, user_normalizer: Callable[[str], str] | None
     ) -> Callable[[str], str]:
-        """Pick the normalizer for matching: user override → bundled → default.
+        """Pick the normalizer for matching: call → lineage → bundled → default.
 
         Order:
-            1. Explicit user-supplied ``normalizer`` kwarg.
-            2. Bundled per-country normalizer (e.g., India's
+            1. Explicit ``normalizer`` passed to the matching call.
+            2. The lineage's own normalizer: ``Lineage(normalizer=...)``, or
+               the ``name_rules`` of a folder loaded with :meth:`from_folder`.
+            3. Bundled per-country normalizer (e.g., India's
                district/honorific stripping). Discovered via
                ``BUNDLED_COUNTRIES[country_code].normalizer``.
-            3. The package-default :func:`normalize_name`.
+            4. The package-default :func:`normalize_name`.
         """
         if user_normalizer is not None:
             return user_normalizer
+        if self._normalizer is not None:
+            return self._normalizer
         bundled = BUNDLED_COUNTRIES.get(self.country_code)
         if bundled is not None and bundled.normalizer is not None:
             return bundled.normalizer
@@ -1325,9 +1434,11 @@ class Lineage:
         cheap on fresh objects while surfacing richer info once
         loading has happened.
         """
-        parts = [f"country_code={self.country_code!r}"]
+        parts = [f"country_code={self.country_code!r}", f"admin_level={self._admin_level}"]
         if self._validity_start_year is not None:
             parts.append(f"validity_start_year={self._validity_start_year}")
+        if self._coverage_end_year is not None:
+            parts.append(f"coverage_end_year={self._coverage_end_year}")
         if self._lineage is not None:
             yrs = self.years
             parts.append(f"years={yrs.start}..{yrs.stop - 1}")

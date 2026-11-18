@@ -12,6 +12,13 @@ from __future__ import annotations
 from .assess import ReadinessReport, assess_country, detect_dialect
 from .assign_ids import IdAssignment, IdAssignmentError, assign_unit_ids
 from .boundary import StableBoundary
+from .country_folder import (
+    CountryDescription,
+    CountryFolderError,
+    normalizer_from_rules,
+    read_country_description,
+    write_country_description,
+)
 from .data import BUNDLED_COUNTRIES, BundledCountry
 from .data_dict import DataDictionary
 from .fnid import (
@@ -135,5 +142,10 @@ __all__ = [
     "attach_stats_ids",
     "read_mapping",
     "normalize_name",
+    "CountryDescription",
+    "CountryFolderError",
+    "normalizer_from_rules",
+    "read_country_description",
+    "write_country_description",
     "__version__",
 ]

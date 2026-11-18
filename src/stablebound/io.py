@@ -17,6 +17,7 @@ a separate file and want to merge them into the RT before passing to
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from pathlib import Path
 
 import geopandas as gpd
@@ -37,8 +38,10 @@ from .schemas import (
 )
 
 
-def _normalize_columns(df: pd.DataFrame) -> pd.DataFrame:
-    """Lowercase + strip whitespace from column names.
+def _normalize_columns(
+    df: pd.DataFrame, columns: Mapping[str, str] | None = None
+) -> pd.DataFrame:
+    """Lowercase + strip whitespace from column names, then apply ``columns``.
 
     The canonical schemas in ``schemas.py`` use lowercase names
     (``event_year``, ``unit_id``, etc.). Many real-world files use
@@ -47,18 +50,50 @@ def _normalize_columns(df: pd.DataFrame) -> pd.DataFrame:
     normalize at the I/O boundary. ``str(c).strip()`` handles the
     occasional Excel quirk where a column name has a stray trailing
     space.
+
+    ``columns`` maps a file's own header to the canonical name, for files
+    whose headers differ by more than case — India's baseline says
+    ``ADM2_ID`` where the schema says ``unit_id``. It is applied after the
+    lowercasing, and its keys are lowercased too, so ``ADM2_ID``, ``adm2_id``
+    and ``Adm2_Id`` all name the same column. A mapping that names a column
+    the file does not have is an error, not a no-op: a typo in a mapping
+    would otherwise surface much later as a confusing "missing column"
+    complaint about the canonical name, or not at all.
     """
     df = df.copy()
     df.columns = [str(c).strip().lower() for c in df.columns]
+    if columns:
+        rename = {str(k).strip().lower(): str(v).strip().lower() for k, v in columns.items()}
+        absent = sorted(k for k in rename if k not in df.columns)
+        if absent:
+            raise SchemaError(
+                f"column mapping names {absent}, which the file does not have. "
+                f"Its columns are: {list(df.columns)}"
+            )
+        # Renaming onto a name the file already has would leave two columns
+        # with one name, and pandas would then hand back a frame where one
+        # column was expected. Refuse it, naming both.
+        clash = sorted(
+            v for k, v in rename.items() if v in df.columns and v not in rename and k != v
+        )
+        if clash:
+            raise SchemaError(
+                f"column mapping renames onto {clash}, which the file already has. "
+                "Map the existing column away, or drop the mapping entry."
+            )
+        df = df.rename(columns=rename)
     return df
 
 
-def read_relationship_table(path: Path | str) -> pd.DataFrame:
+def read_relationship_table(
+    path: Path | str, columns: Mapping[str, str] | None = None
+) -> pd.DataFrame:
     """Load a canonical relationship table (CSV or XLSX).
 
     Pipeline:
         1. Pick reader by file extension.
-        2. Lowercase column names.
+        2. Lowercase column names, then apply ``columns`` (file header ->
+           canonical name; see :func:`_normalize_columns`).
         3. Validate (raises SchemaError on bad columns / event_types).
         4. Project to canonical-only columns and reset the index.
 
@@ -73,7 +108,7 @@ def read_relationship_table(path: Path | str) -> pd.DataFrame:
         df = pd.read_excel(path)
     else:
         df = pd.read_csv(path)
-    df = _normalize_columns(df)
+    df = _normalize_columns(df, columns)
     validate_relationship_table(df)
     # Project to canonical columns only. Dropping extras here means the
     # rest of the package can assume a clean column set without further
@@ -122,20 +157,26 @@ def read_shapefile(path: Path | str, id_column: str) -> gpd.GeoDataFrame:
     return gdf
 
 
-def read_name_change_log(path: Path | str) -> pd.DataFrame:
+def read_name_change_log(
+    path: Path | str, columns: Mapping[str, str] | None = None
+) -> pd.DataFrame:
     """Load a name-change log (CSV or XLSX).
 
     A name-change log is a separate file — distinct from the RT — that
     lists official renames. Some FEWS NET data ships these as a sidecar
     rather than embedding them in the RT. Pass to ``merge_name_changes``
     to fold them into the RT before constructing a LineageGraph.
+
+    ``columns`` maps the file's own headers to the canonical names
+    (India's log says ``CHANGE_YEAR`` / ``OLD_OFFICIAL_NAME``); see
+    :func:`_normalize_columns`.
     """
     path = Path(path)
     if path.suffix.lower() in (".xlsx", ".xls"):
         df = pd.read_excel(path)
     else:
         df = pd.read_csv(path)
-    df = _normalize_columns(df)
+    df = _normalize_columns(df, columns)
     validate_name_change_log(df)
     # Keep `level` when the file carries it. India's log covers both admin
     # levels and the FEWS deliverable has to split them; projecting it away
@@ -146,10 +187,16 @@ def read_name_change_log(path: Path | str) -> pd.DataFrame:
     return df[cols].reset_index(drop=True)
 
 
-def read_baseline(path: Path | str, base_year: int | None = None) -> pd.DataFrame:
+def read_baseline(
+    path: Path | str,
+    base_year: int | None = None,
+    columns: Mapping[str, str] | None = None,
+) -> pd.DataFrame:
     """Load a baseline-snapshot CSV/XLSX.
 
-    Columns are lowercased and validated. If a ``year`` column is
+    Columns are lowercased, renamed by ``columns`` when given (India's
+    baseline says ``ADM2_ID`` / ``ADM2_NAME`` for ``unit_id`` / ``name``; see
+    :func:`_normalize_columns`), and validated. If a ``year`` column is
     present AND ``base_year`` is provided, rows are filtered to that
     year — convenience for researchers who keep multi-year snapshots
     (1991, 1992, …, 2024) in a single CSV (the legacy India case has
@@ -164,7 +211,7 @@ def read_baseline(path: Path | str, base_year: int | None = None) -> pd.DataFram
         df = pd.read_excel(path)
     else:
         df = pd.read_csv(path)
-    df = _normalize_columns(df)
+    df = _normalize_columns(df, columns)
     # Year-filter BEFORE validation: a multi-year file might have
     # duplicate unit_ids (one row per year per unit), which fails the
     # validator's uniqueness check. Filtering first avoids the false

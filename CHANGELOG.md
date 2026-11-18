@@ -15,6 +15,36 @@ private archive.
 
 ### Added
 
+- `Lineage.from_folder(folder)` loads a folder of relationship tables as it is
+  shipped, described by a `stablebound.json` beside them: which file is which,
+  a per-table mapping from the file's own headers to the canonical columns,
+  the country's facts (admin level, validity and coverage years, notes) and its
+  name-tidying rules written as data (module `stablebound.country_folder`;
+  `read_country_description`, `write_country_description`,
+  `normalizer_from_rules`). Before this, India's tables as published (headers
+  `ADM2_ID`, `CHANGE_YEAR` ...) could not be loaded at all — the baseline and
+  name-change log failed the schema check — and a district-level country
+  loaded by path was silently read as admin level 1. Pinned by rebuilding
+  India's published files from the bundle and requiring
+  `Lineage.from_folder` to equal `Lineage("IN")` on every fact, table, graph,
+  validation finding, snapshot 1991-2025, normalised name and `export_fews`
+  file, with "IN" removed from the built-in list; planted faults (wrong
+  mapping, wrong fact, missing rule) are each caught.
+- `Lineage(...)` keywords `coarse_lineage_path`, `admin_level`,
+  `validity_start_year`, `coverage_end_year`, `notes`, `normalizer` and
+  `columns`, so a country not on the built-in list can carry the facts that
+  list held. For a listed country they override the built-in value. A
+  bundled `Lineage` now keeps its normalizer from construction rather than
+  looking it up in the registry at each call.
+- The readers (`read_relationship_table`, `read_baseline`,
+  `read_name_change_log`) take an optional `columns` mapping, applied after
+  lowercasing; a mapping naming a header the file lacks, or renaming onto a
+  header it already has, raises `SchemaError`.
+- Public names `year_compatible`, `walk_year_compat_ancestors` and
+  `earliest_created_ancestor` in `stablebound.match`, so a country's own
+  statistics matcher can live outside the package without private imports.
+- `examples/exampleland/` carries a `stablebound.json` and its `config.py`
+  loads with `Lineage.from_folder`.
 - `analyze_breakpoints(..., missing="native")`: hand BEAST the regular annual
   grid with its gaps as NaN instead of interpolating them (the default,
   `"interpolate"`, is unchanged and is what every published number used).

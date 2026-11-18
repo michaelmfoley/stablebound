@@ -2012,6 +2012,15 @@ def attach_stats_ids(
     return df
 
 
+# Public names for the three lineage-walking helpers. A country's own matcher
+# (India's DESAGRI matcher, which lives with the India pipeline, not in this
+# package) resolves a statistics row's unit by walking these same ancestor
+# chains; it should not have to import private names to do so. The
+# underscored originals stay, because the matching code above calls them.
+year_compatible = _year_compatible
+walk_year_compat_ancestors = _walk_year_compat_ancestors
+earliest_created_ancestor = _earliest_created_ancestor
+
 __all__ = [
     "MatchProposal",
     "propose_shapefile_mapping",
@@ -2020,6 +2029,9 @@ __all__ = [
     "attach_stats_ids",
     "read_mapping",
     "normalize_name",
+    "year_compatible",
+    "walk_year_compat_ancestors",
+    "earliest_created_ancestor",
     "DEFAULT_FUZZY_THRESHOLD",
     "DEFAULT_SKETCHY_THRESHOLD",
 ]

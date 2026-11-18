@@ -1,0 +1,9 @@
+{
+  "_about": "Describes this folder for Lineage.from_folder(). Exampleland is a five-unit synthetic country: 2010 baseline, a 2014 split, a 2016 rename and a 2018 merge. Its headers are already canonical, so it needs no column mapping, and it is state-level (admin level 1, the default).",
+  "format": "stablebound-country/1",
+  "country_code": "EX",
+  "files": {
+    "relationship_table": "relationship_table.csv",
+    "baseline": "baseline.csv"
+  }
+}

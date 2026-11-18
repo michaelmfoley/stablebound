@@ -113,6 +113,81 @@ ln = Lineage(
 )
 ```
 
+A custom country also needs the facts no table states about itself, or the
+package falls back to defaults — most importantly, it reads the lineage as
+admin level 1 (state-level). Pass them with the paths:
+
+| Keyword | Meaning | Default |
+|---|---|---|
+| `admin_level` | Level of the working lineage (2 for districts) | 1 |
+| `coarse_lineage_path` | Lineage of the level above (states), for a two-level country | none |
+| `validity_start_year` | Earliest year the record can be trusted | none (inferred from the baseline's `year`) |
+| `coverage_end_year` | Last year the source affirms the unit set | none |
+| `notes` | Free text | `""` |
+| `normalizer` | Function tidying names before matching | `normalize_name` |
+| `columns` | Per-table header → canonical-name mapping (below) | none |
+
+### Loading a folder as it is shipped: `stablebound.json`
+
+Relationship tables are usually published by whoever maintains them, with
+their own file names and headers. Put a `stablebound.json` next to the tables
+and the folder loads as it is, with no conversion:
+
+```python
+ln = Lineage.from_folder("path/to/folder")
+```
+
+The file says which file is which, maps headers that differ from the
+canonical names by more than case, states the country's facts, and gives its
+name-tidying rules as data. Paths are relative to the folder; keys starting
+with `_` are comments; any other unknown key is an error, so a typo cannot be
+silently ignored. India, as published with the India dataset:
+
+```json
+{
+  "format": "stablebound-country/1",
+  "country_code": "IN",
+  "admin_level": 2,
+  "validity_start_year": 1991,
+  "coverage_end_year": 2025,
+  "notes": "ADM2 (district-level) lineage. Baseline is the 1991 admin snapshot.",
+  "files": {
+    "relationship_table": "lineage_adm2.xlsx",
+    "coarse_lineage": "lineage_adm1.xlsx",
+    "baseline": "baseline_1991.csv",
+    "name_change_log": "name_changes.xlsx"
+  },
+  "columns": {
+    "baseline": {"YEAR": "year", "ADM1_ID": "coarse_id", "ADM1_NAME": "coarse_name",
+                 "ADM2_ID": "unit_id", "ADM2_NAME": "name"},
+    "name_change_log": {"CHANGE_YEAR": "event_year", "LEVEL": "level", "UNIT_ID": "unit_id",
+                        "OLD_OFFICIAL_NAME": "old_name", "NEW_OFFICIAL_NAME": "new_name"}
+  },
+  "name_rules": {
+    "strip_before_lowercase": ["\\s*\\(([A-Z]{2,3})\\)\\s*$"],
+    "remove_substrings": [" district", " dist.", " dist"],
+    "remove_patterns": ["\\bdr\\.\\s*", "\\bsri\\s+", "\\bshri\\s+"]
+  }
+}
+```
+
+Only `format`, `country_code` and `files.relationship_table` are required.
+The lineage tables need no `columns` entry: `EVENT_YEAR` is `event_year` once
+lowercased. A mapping that names a header the file does not have is an error
+when the table is read.
+
+The name rules run in order: patterns stripped **before** lowercasing (India's
+statistics append the state code, "Villupuram (TN)", recognisable only by its
+capitals), then substrings removed, then patterns removed, then the package
+default `normalize_name`. Leaving out the first rule drops India's match rate
+for statistics names from 97.5% to 79%.
+
+`read_country_description(folder)` checks the file without reading the
+tables (format, keys, types, that each file exists, that each pattern
+compiles); `write_country_description(desc, path)` writes one.
+`examples/exampleland/` carries the minimal case: a country code and two
+file names.
+
 ### If your lineage has names but no ids
 
 `Lineage` needs an id on every side of every event. When you author a

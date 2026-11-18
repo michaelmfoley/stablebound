@@ -34,14 +34,11 @@ from stablebound import Lineage
 _HERE = Path(__file__).resolve().parent
 
 # Exampleland is a custom country (no ISO code "EX" in the bundled
-# registry), so we pass the file paths explicitly. The baseline lists
-# the five 2010 units (Alpha, Bravo, Charlie, Delta, Echo). The RT
-# adds the 2014 split, 2016 name change, and 2018 merge.
-lineage = Lineage(
-    "EX",
-    relationship_table_path=_HERE / "relationship_table.csv",
-    baseline_path=_HERE / "baseline.csv",
-)
+# registry). Its folder carries a stablebound.json saying which file is the
+# relationship table and which the baseline, so it loads as shipped. The
+# baseline lists the five 2010 units (Alpha, Bravo, Charlie, Delta, Echo).
+# The RT adds the 2014 split, 2016 name change, and 2018 merge.
+lineage = Lineage.from_folder(_HERE)
 # The modern shapefile ships with canonical ``unit_id``s already
 # attached — no name-matching step required. attach_shapefile passes
 # through unmodified.
