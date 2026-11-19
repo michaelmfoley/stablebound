@@ -1,5 +1,5 @@
-"""Coverage metadata: how current is a bundled lineage, and does the
-analysis window respect that?
+"""Coverage metadata: how current is a lineage, and does the analysis window
+respect that?
 
 ``coverage_end_year`` answers a question the lineage alone cannot: the last
 year the SOURCE affirms the unit set. It is not the last event year. The case
@@ -12,8 +12,8 @@ extends to the coverage end, and asking past it warns instead of silently
 implying the boundaries are attested.
 
 India cannot be the subject — its last event year and its coverage end are both
-2025 — so the synthetic ``legacy_admin1`` country (last event 2025) is registered
-with a coverage end of 2030 for the duration of each test.
+2025 — so the synthetic ``legacy_admin1`` country (last event 2025) is loaded
+with a stated coverage end of 2030.
 """
 
 from __future__ import annotations
@@ -24,7 +24,7 @@ from pathlib import Path
 
 import geopandas as gpd
 
-from stablebound import BUNDLED_COUNTRIES, Lineage, StableBoundary
+from stablebound import Lineage, StableBoundary
 from tests.conftest import get_synthetic
 
 SYN = get_synthetic("legacy_admin1")
@@ -32,10 +32,9 @@ NAME_COL = "unit_name"
 LEGACY_RT = Path(__file__).resolve().parent / "fixtures/rt_convert/relationshiptable_XX.csv"
 
 
-def _covered(bundle_synthetic) -> Lineage:
-    """The synthetic country, bundled with a coverage end past its last event."""
-    bundle_synthetic("legacy_admin1", code="ZY", coverage_end_year=2030)
-    return Lineage("ZY")
+def _covered(synthetic_with_facts) -> Lineage:
+    """The synthetic country, with a stated coverage end past its last event."""
+    return synthetic_with_facts("legacy_admin1", code="ZY", coverage_end_year=2030)
 
 
 def _attach(ln: Lineage) -> None:
@@ -44,15 +43,15 @@ def _attach(ln: Lineage) -> None:
     ln.attach_shapefile(gdf, mapping=prop.proposals, name_column=NAME_COL)
 
 
-def test_every_bundled_country_declares_coverage():
-    for cc, entry in BUNDLED_COUNTRIES.items():
-        assert entry.coverage_end_year is not None, f"{cc} has no coverage_end_year"
-        assert entry.coverage_end_year >= entry.validity_start_year, cc
+def test_india_as_shipped_declares_coverage(india):
+    """India's stablebound.json states its coverage, and it is not before validity."""
+    assert india.coverage_end_year == 2025
+    assert india.coverage_end_year >= india.validity_start_year
 
 
-def test_coverage_is_not_merely_the_last_event_year(bundle_synthetic):
+def test_coverage_is_not_merely_the_last_event_year(synthetic_with_facts):
     """The field exists because these two years can differ."""
-    ln = _covered(bundle_synthetic)
+    ln = _covered(synthetic_with_facts)
     assert ln.lineage.max_event_year == 2025
     assert ln.coverage_end_year == 2030
 
@@ -68,13 +67,13 @@ def test_custom_country_has_no_coverage_claim(tmp_path):
     assert ln.coverage_end_year is None
 
 
-def test_default_window_extends_to_coverage_end(bundle_synthetic):
+def test_default_window_extends_to_coverage_end(synthetic_with_facts):
     """The modern unit set first appears in snapshot(2026); year inference ties
     across the unchanged years after that and takes the earliest, so the
     inferred vintage is 2026 for a country covered through 2030. Without the
     coverage floor the build would stop at the last event.
     """
-    ln = _covered(bundle_synthetic)
+    ln = _covered(synthetic_with_facts)
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         _attach(ln)
@@ -89,8 +88,8 @@ def test_default_window_extends_to_coverage_end(bundle_synthetic):
     assert len(years) > 3
 
 
-def test_asking_past_coverage_warns_but_still_builds(bundle_synthetic):
-    ln = _covered(bundle_synthetic)
+def test_asking_past_coverage_warns_but_still_builds(synthetic_with_facts):
+    ln = _covered(synthetic_with_facts)
     with warnings.catch_warnings(record=True) as caught:
         warnings.simplefilter("always")
         _attach(ln)
@@ -109,8 +108,8 @@ def test_asking_past_coverage_warns_but_still_builds(bundle_synthetic):
     assert "exceeds coverage end" in report
 
 
-def test_no_warning_inside_coverage(bundle_synthetic):
-    ln = _covered(bundle_synthetic)
+def test_no_warning_inside_coverage(synthetic_with_facts):
+    ln = _covered(synthetic_with_facts)
     with warnings.catch_warnings(record=True) as caught:
         warnings.simplefilter("always")
         _attach(ln)

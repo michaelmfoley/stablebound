@@ -4,10 +4,11 @@ A reproducible framework for harmonizing subnational data across administrative
 boundary changes.
 
 > **Status: v0.1.5.** API has stabilized around the
-> `Lineage` / `StableBoundary` / `ModernBoundary` triad. India is the
-> bundled, validated country and the one this release describes; the
-> method itself is country-agnostic, and any country can be loaded from
-> its own relationship table (see [Inputs](#inputs)).
+> `Lineage` / `StableBoundary` / `ModernBoundary` triad. The package is
+> the method only and ships no country's data: any country loads from its
+> own relationship tables, as published, with `Lineage.from_folder` (see
+> [Inputs](#inputs)). India — the validated country this work was built
+> on — is published that way with the StableBound-India dataset.
 
 ## Overview
 
@@ -40,9 +41,12 @@ In other words, StableBound takes care of unifying spatial and tabular informati
 with historical administrative unit evolution to produce accurate and harmonized
 datasets.
 
-For India the relationship table, baseline and name-change log are bundled;
-`Lineage("IN")` is all a user needs. StableBound also includes functionality
-to provide your own relationship table and shapefile for any country.
+A country's relationship table, baseline and name-change log are kept by
+whoever maintains them — a data repository, a deposit, a collaborator's
+folder — in their own file names and headers. A small `stablebound.json`
+beside them says which file is which and states the facts the tables cannot
+(admin level, years covered, how names are tidied), so
+`Lineage.from_folder(folder)` loads them exactly as shipped.
 
 ## Install
 
@@ -66,18 +70,23 @@ Python ≥ 3.10. Depends on `pandas`, `numpy`, `geopandas`, `shapely`,
 
 ## Quickstart
 
-This runs immediately after install:
+Point it at a folder of relationship tables with a `stablebound.json`:
 
 ```python
 from stablebound import Lineage
 
-ln = Lineage("IN")      # the bundled, validated lineage (India)
+# India's district tables as published with the StableBound-India dataset
+# (Zenodo, doi:10.5281/zenodo.21653283): the deposit's intermediates/ folder.
+ln = Lineage.from_folder("stablebound_india/intermediates")
 
 ln.lineage              # parsed LineageGraph
 ln.snapshot(year=2014)  # DataFrame of canonical (unit_id, unit_name) pairs
 ln.years                # range(1991, 2027): the years the lineage can answer for
 print(ln.validation_report())  # 8 automatic data-quality checks
 ```
+
+In a clone, `Lineage.from_folder("examples/exampleland")` loads a five-unit
+synthetic country the same way.
 
 For a guided end-to-end tour (lineage → stable boundaries → aggregated
 stats → modern product) on a tiny synthetic country, open
@@ -93,7 +102,7 @@ long-form statistics table:
 ```python
 from stablebound import Lineage, StableBoundary
 
-ln = Lineage("IN")
+ln = Lineage.from_folder("stablebound_india/intermediates")
 
 # Attach a modern shapefile. The matcher fuzzy-matches feature names
 # against the lineage; pass coarse_column when your shapefile has a
@@ -126,11 +135,26 @@ sb.get_stats(variable="yield_mt_ha", year=2018)
 
 ## Inputs
 
-### Bundled relationship tables
+### Loading relationship tables
 
-`Lineage("IN")` loads the bundled India data from `src/stablebound/data/IN/`
-(see `stablebound.BUNDLED_COUNTRIES["IN"].notes` for coverage and provenance).
-India is the only bundled country for now (others to come). To bring your own, supply paths:
+StableBound ships no country's tables. Each country's are published by
+whoever maintains them; India's district tables (1991 baseline, 1991–2025)
+are published with the StableBound-India dataset. A folder holding the
+tables and a `stablebound.json` loads as it is:
+
+```python
+ln = Lineage.from_folder("my_country/")
+```
+
+`stablebound.json` names the files, maps any header that differs from the
+canonical columns below by more than case (India's baseline says `ADM2_ID`
+for `unit_id`), and states what the tables cannot: `admin_level`, the
+`coarse_lineage` of the level above, `validity_start_year`,
+`coverage_end_year`, notes, and the country's name-tidying rules as data.
+The format, with India's file as the example, is in
+[`docs/USAGE.md`](docs/USAGE.md) ("Loading a folder as it is shipped");
+[`examples/exampleland/stablebound.json`](examples/exampleland/stablebound.json)
+is the minimal case. The same can be passed as keywords:
 
 ```python
 ln = Lineage(
@@ -138,8 +162,13 @@ ln = Lineage(
     relationship_table_path="my_country/relationship_table.csv",
     baseline_path="my_country/baseline.csv",
     name_change_log_path="my_country/name_changes.xlsx",  # optional
+    admin_level=2,                                        # default 1
+    coarse_lineage_path="my_country/relationship_table_adm1.csv",
 )
 ```
+
+Without them a district-level country is read as state-level (admin level
+1), with no coverage claim and the package's default name tidying.
 
 If your relationship table is written in names and only the baseline has
 ids, `assign_unit_ids(lineage, baseline)` mints the missing ids by replaying
@@ -213,7 +242,6 @@ lists the rows the warnings reference.
 - [`docs/USER_MANUAL.md`](docs/USER_MANUAL.md) — guided tour through the codebase, intended to be read alongside the source.
 - [`docs/methodology.md`](docs/methodology.md) — stable-product algorithm reference, paired to the paper.
 - [`docs/methodology_modern.md`](docs/methodology_modern.md) — modern-product algorithm reference.
-- [`tools/india/README.md`](tools/india/README.md) — how the bundled India data and the shipped shapefile ids are regenerated from the canonical sources.
 - [`examples/README.md`](examples/README.md) — worked examples with real output, on the synthetic countries that ship with the tests.
 
 ## Known Issues
@@ -246,12 +274,10 @@ package raises.
   reuses a cached dissolve keyed on country code and target year only. If
   you edit a relationship table in place — the normal loop when preparing a
   new country — pass `refresh=True` or clear `output_dir`.
-- **The India data generators need an external data tree.** Scripts under
-  `tools/india/` resolve the canonical source files through
-  `STABLEBOUND_DATA_ROOT`, which is not part of this repository, so they do
-  not run on a clean checkout. The test suite (`pytest`) is self-contained;
-  two of its tests self-skip for the same reason, and the breakpoint tests
-  skip unless the optional `Rbeast` dependency is installed
+- **The breakpoint tests need an optional dependency.** The test suite
+  (`pytest`) is self-contained — its real-country tests read a frozen copy of
+  India's published tables in `tests/fixtures/india_as_shipped/` — but the
+  breakpoint tests skip unless `Rbeast` is installed
   (`pip install "stablebound[analysis]"`).
 - **The modern product has not been re-audited on India since the 0.1.3
   lineage fixes.** It is validated on the synthetic fixtures and by the

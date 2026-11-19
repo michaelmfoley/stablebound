@@ -9,13 +9,10 @@ Construction:
 
     from stablebound import Lineage
 
-    # Bundled country: zero-config.
-    ln = Lineage("IN")
-
     # A folder of tables with a stablebound.json beside them, as published.
     ln = Lineage.from_folder("my_country/")
 
-    # Custom country: pass paths (and any facts) explicitly.
+    # Or pass the paths (and any facts) explicitly.
     ln = Lineage(
         "PT",
         relationship_table_path="my_country/rt.csv",
@@ -60,7 +57,6 @@ import pandas as pd
 
 from .country_folder import TABLES as _TABLES
 from .country_folder import read_country_description
-from .data import BUNDLED_COUNTRIES
 from .io import (
     merge_name_changes,
     read_baseline,
@@ -89,15 +85,15 @@ _DfOrPath = Union[pd.DataFrame, Path, str]
 class Lineage:
     """Country-level lineage + shapefile facade. Lazy-loads file inputs.
 
-    Construction validates paths exist and (for custom countries) that
-    a relationship table is provided. Heavy reads happen on first
-    attribute access: ``self.lineage`` parses the RT and runs
-    validation; ``self.baseline`` reads the baseline CSV; etc. A user
-    who only wants ``ln.years`` doesn't pay for full RT parsing.
+    Construction validates that a relationship table is given and that every
+    path exists. Heavy reads happen on first attribute access:
+    ``self.lineage`` parses the RT and runs validation; ``self.baseline``
+    reads the baseline CSV; etc. A user who only wants ``ln.years`` doesn't
+    pay for full RT parsing.
 
-    Bundled-country shortcut: ``Lineage("IN")`` resolves to the paths
-    in :data:`stablebound.BUNDLED_COUNTRIES`. Any explicit path argument
-    overrides the bundled default for that file only.
+    The package ships no country's tables. A country's relationship tables
+    live with whoever maintains them; :meth:`from_folder` loads such a folder
+    as it is published, from the ``stablebound.json`` beside the tables.
 
     State that mutates after construction:
 
@@ -142,8 +138,9 @@ class Lineage:
 
         :meth:`from_folder` reads all of this from a ``stablebound.json``
         beside the tables, which is the usual way to load a published folder.
-        For a country on the built-in list, any value given here overrides
-        the built-in one.
+        A fact not given takes its default: admin level 1, no coarse
+        lineage, no validity or coverage year, no notes, the package's
+        :func:`~stablebound.match.normalize_name`.
         """
         self.country_code = country_code.upper()
         if admin_level is not None and (
@@ -159,78 +156,32 @@ class Lineage:
             self._columns[table] = dict(mapping)
         self._normalizer: Callable[[str], str] | None = normalizer
 
-        # A country either ships with the package or the caller brings their
-        # own files. Which one decides everything set below.
-        bundled = BUNDLED_COUNTRIES.get(self.country_code)
-        if bundled is not None:
-            # For a country we ship, the files are already known. A caller can
-            # still point at their own version of any one of them — to try a
-            # corrected boundary record without editing the installed package,
-            # which is the usual way improvements start.
-            self._rt_path = (
-                Path(relationship_table_path)
-                if relationship_table_path
-                else bundled.lineage_path
+        # The package ships no country's tables, so the caller always brings
+        # them — usually via from_folder, which reads a stablebound.json.
+        if relationship_table_path is None:
+            raise ValueError(
+                f"Lineage({country_code!r}) needs relationship_table_path: StableBound "
+                "ships no country's relationship tables. Load a published folder with "
+                "Lineage.from_folder(path), which reads the stablebound.json beside the "
+                "tables, or pass relationship_table_path= (and baseline_path=, "
+                "name_change_log_path=, ...) yourself."
             )
-            self._baseline_path = Path(baseline_path) if baseline_path else bundled.baseline_path
-            self._ncl_path = (
-                Path(name_change_log_path)
-                if name_change_log_path
-                else bundled.name_change_log_path
-            )
-            # These come only from the shipped list. They are the accumulated
-            # judgements about the country that no file states outright: from
-            # when the data can be trusted, how far it has been kept current,
-            # whether a second tier of boundaries exists, and how that
-            # country's names have to be tidied before they will match.
-            self._validity_start_year: int | None = bundled.validity_start_year
-            self._coverage_end_year: int | None = bundled.coverage_end_year
-            self._admin_level: int = bundled.admin_level
-            self._coarse_rt_path: Path | None = bundled.coarse_lineage_path
-            self._notes: str = bundled.notes
-            # Taken now, like every other fact above, so the object does not
-            # change if the registry is edited after it was built. A
-            # normalizer the caller passed still wins.
-            if self._normalizer is None:
-                self._normalizer = bundled.normalizer
-        else:
-            if relationship_table_path is None:
-                raise ValueError(
-                    f"country_code {country_code!r} is not bundled with "
-                    f"StableBound; relationship_table_path is required. "
-                    f"Bundled countries: {sorted(BUNDLED_COUNTRIES.keys())}"
-                )
-            # A country we don't ship brings its own files, and with them only
-            # what the caller states: when its data becomes trustworthy, when it
-            # stops, whether a second admin level exists. Anything not stated
-            # falls back to the defaults below. Note the admin level is
-            # *assumed* to be 1 rather than worked out, so a district-level
-            # country is read as state-level unless the caller passes
-            # admin_level (or loads it with from_folder, whose stablebound.json
-            # says so).
-            self._rt_path = Path(relationship_table_path)
-            self._baseline_path = Path(baseline_path) if baseline_path else None
-            self._ncl_path = Path(name_change_log_path) if name_change_log_path else None
-            self._validity_start_year = None
-            self._coverage_end_year = None
-            self._admin_level = 1
-            self._coarse_rt_path = None
-            self._notes = ""
+        self._rt_path = Path(relationship_table_path)
+        self._baseline_path = Path(baseline_path) if baseline_path else None
+        self._ncl_path = Path(name_change_log_path) if name_change_log_path else None
 
-        # Facts the caller states win over both of the defaults above: the
-        # built-in list's (so a corrected value can be tried without editing
-        # the package) and the bare assumptions made for a country we don't
-        # ship (so a district-level country is not read as state-level).
-        if admin_level is not None:
-            self._admin_level = admin_level
-        if coarse_lineage_path is not None:
-            self._coarse_rt_path = Path(coarse_lineage_path)
-        if validity_start_year is not None:
-            self._validity_start_year = validity_start_year
-        if coverage_end_year is not None:
-            self._coverage_end_year = coverage_end_year
-        if notes is not None:
-            self._notes = notes
+        # The country's facts: only what the caller states, each with a
+        # default. Note the admin level is *assumed* to be 1 rather than worked
+        # out, so a district-level country is read as state-level unless the
+        # caller passes admin_level (or loads it with from_folder, whose
+        # stablebound.json says so).
+        self._admin_level: int = admin_level if admin_level is not None else 1
+        self._coarse_rt_path: Path | None = (
+            Path(coarse_lineage_path) if coarse_lineage_path is not None else None
+        )
+        self._validity_start_year: int | None = validity_start_year
+        self._coverage_end_year: int | None = coverage_end_year
+        self._notes: str = notes if notes is not None else ""
         if coarse_lineage_path is not None and self._admin_level < 2:
             raise ValueError(
                 f"coarse_lineage_path is given but admin_level is {self._admin_level}; a "
@@ -309,8 +260,8 @@ class Lineage:
 
         ``name_change_log_path`` is optional but recommended for
         countries where the FEWS RT is known to be incomplete on
-        renames (India in particular: the bundled FEWS RT encodes only
-        ~12 renames out of dozens).
+        renames (India in particular: its FEWS RT encodes only ~12
+        renames out of dozens).
         """
         from .rt_convert import (
             convert_relationship_table_to_lineage,
@@ -349,7 +300,7 @@ class Lineage:
         obj._fnid_map = fnid_map
         # The RT's latest hierarchical vintage is the last year the source
         # affirms the unit set. Anything after that is unattested — the same
-        # meaning as BundledCountry.coverage_end_year.
+        # meaning as the coverage_end_year a caller or stablebound.json states.
         try:
             _vintages = pd.to_numeric(
                 old_rt.get("from_year"), errors="coerce"
@@ -420,8 +371,7 @@ class Lineage:
     def baseline(self) -> pd.DataFrame | None:
         """Baseline snapshot (units alive at the earliest valid year).
 
-        ``None`` for custom countries that didn't supply one. Bundled
-        countries always have a baseline. Alternative constructors
+        ``None`` when no baseline was supplied. Alternative constructors
         (e.g. :meth:`from_legacy_rt`) prefill the cache with a derived
         baseline and leave ``_baseline_path`` unset — those cases are
         served from the cache.
@@ -431,7 +381,7 @@ class Lineage:
         if self._baseline_path is None:
             return None
         # validity_start_year is used as the filter year if the
-        # baseline file carries multi-year rows. India's bundled
+        # baseline file carries multi-year rows. India's published
         # baseline is single-year (1991).
         self._baseline = read_baseline(
             self._baseline_path,
@@ -456,8 +406,9 @@ class Lineage:
         A country whose upper admin units also change needs their events too:
         India's states split (Uttarakhand 2000, Telangana 2014) and the FEWS
         relationship table carries rows at both levels. Those live in a
-        separate file in their own id space, registered as
-        ``BundledCountry.coarse_lineage_path``.
+        separate file in their own id space, passed as
+        ``coarse_lineage_path`` (or ``files.coarse_lineage`` in a
+        ``stablebound.json``).
 
         The working level's graph is :attr:`lineage` unchanged. The coarse
         level is built on demand, with the name-change log filtered to that
@@ -618,10 +569,11 @@ class Lineage:
     def coverage_end_year(self) -> int | None:
         """Last year the source data affirms this country's unit set.
 
-        ``None`` for a custom country unless the caller states it
-        (``coverage_end_year=`` or a ``stablebound.json``) — the package cannot
-        know how current a user-supplied lineage is. See
-        :attr:`stablebound.data.BundledCountry.coverage_end_year`.
+        ``None`` unless the caller states it (``coverage_end_year=`` or a
+        ``stablebound.json``) — the package cannot know how current a
+        lineage is. It is the last year the source affirms the unit set,
+        not the last event year: a lineage whose last change was in 2019 but
+        whose source was checked against 2025 has coverage through 2025.
         """
         return self._coverage_end_year
 
@@ -684,15 +636,14 @@ class Lineage:
         """Earliest year for which the product is valid.
 
         As stated by the caller (``validity_start_year=`` or a
-        ``stablebound.json``); otherwise, for bundled countries, from
-        :data:`stablebound.BUNDLED_COUNTRIES`. Otherwise ``None`` (the
-        package can't infer it).
+        ``stablebound.json``); otherwise ``None`` (the package can't infer
+        it).
         """
         return self._validity_start_year
 
     @property
     def notes(self) -> str:
-        """Free-text notes: the caller's, else the bundled registry's, else ``""``."""
+        """Free-text notes, as stated by the caller or ``stablebound.json``; else ``""``."""
         return self._notes
 
     @property
@@ -701,7 +652,8 @@ class Lineage:
 
         Resolution order:
 
-        1. ``validity_start_year`` from the bundled registry (when set).
+        1. ``validity_start_year``, as stated by the caller or a
+           ``stablebound.json`` (when set).
         2. The minimum value in the baseline's ``year`` column (when a
            baseline is provided and it carries a year column).
         3. The lineage graph's ``min_event_year`` (when the RT is non-
@@ -810,33 +762,27 @@ class Lineage:
     def _resolve_normalizer(
         self, user_normalizer: Callable[[str], str] | None
     ) -> Callable[[str], str]:
-        """Pick the normalizer for matching: call → lineage → bundled → default.
+        """Pick the normalizer for matching: call → lineage → default.
 
         Order:
             1. Explicit ``normalizer`` passed to the matching call.
             2. The lineage's own normalizer: ``Lineage(normalizer=...)``, or
-               the ``name_rules`` of a folder loaded with :meth:`from_folder`.
-            3. Bundled per-country normalizer (e.g., India's
-               district/honorific stripping). Discovered via
-               ``BUNDLED_COUNTRIES[country_code].normalizer``.
-            4. The package-default :func:`normalize_name`.
+               the ``name_rules`` of a folder loaded with :meth:`from_folder`
+               (e.g. India's district/honorific/state-code stripping).
+            3. The package-default :func:`normalize_name`.
         """
         if user_normalizer is not None:
             return user_normalizer
         if self._normalizer is not None:
             return self._normalizer
-        bundled = BUNDLED_COUNTRIES.get(self.country_code)
-        if bundled is not None and bundled.normalizer is not None:
-            return bundled.normalizer
         return normalize_name
 
     @property
     def default_normalizer(self) -> Callable[[str], str]:
         """The normalizer that would be used if none was passed explicitly.
 
-        For bundled countries this may be a country-specific
-        normalizer (India strips "district" / honorifics); otherwise
-        it's the package default :func:`normalize_name`.
+        The lineage's own (``Lineage(normalizer=...)`` or a folder's
+        ``name_rules``), else the package default :func:`normalize_name`.
         """
         return self._resolve_normalizer(None)
 

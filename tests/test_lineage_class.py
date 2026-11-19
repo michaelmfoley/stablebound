@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from tests.conftest import INDIA_FIXTURE, load_india  # India from tests/fixtures/india_as_shipped
+
 from pathlib import Path
 
 import geopandas as gpd
@@ -20,9 +22,9 @@ EXAMPLELAND = Path(__file__).resolve().parents[1] / "examples" / "exampleland"
 def _exampleland_lineage() -> Lineage:
     """Custom-country Lineage pointing at the Exampleland fixtures.
 
-    Exampleland is not bundled, so this exercises the custom-country
-    branch of the constructor. The baseline is needed for units like
-    Bravo that never appear in the RT.
+    Paths passed directly, with no stated facts, so this exercises the
+    constructor's defaults. The baseline is needed for units like Bravo
+    that never appear in the RT.
     """
     return Lineage(
         "ZZ",
@@ -36,39 +38,41 @@ def _make_shapefile_gdf(names: list[str]) -> gpd.GeoDataFrame:
     return gpd.GeoDataFrame({"name": names, "geometry": geom}, crs="EPSG:4326")
 
 
-# --- Bundled-country construction ---------------------------------------
+# --- Construction --------------------------------------------------------
 
 
-def test_bundled_india_construction():
-    ln = Lineage("IN")
+def test_india_as_shipped_construction():
+    ln = load_india()
     assert ln.country_code == "IN"
     assert ln.validity_start_year == 1991
     assert "1991" in ln.notes
 
 
-def test_bundled_country_without_a_name_change_log(bundle_synthetic):
-    """The bundled branch with ``name_change_log_path=None``; India always has one."""
-    bundle_synthetic("legacy_admin1", code="ZY", coverage_end_year=2030)
-    ln = Lineage("ZY")
+def test_stated_facts_without_a_name_change_log(synthetic_with_facts):
+    """Facts stated, no name-change log given; India always has one."""
+    ln = synthetic_with_facts("legacy_admin1", code="ZY", coverage_end_year=2030)
     assert ln.country_code == "ZY"
     assert ln.validity_start_year == 2010
     assert ln.name_change_log is None
 
 
 def test_country_code_is_uppercased():
-    ln = Lineage("in")
-    assert ln.country_code == "IN"
+    ln = Lineage("ex", relationship_table_path=EXAMPLELAND / "relationship_table.csv")
+    assert ln.country_code == "EX"
 
 
-def test_unknown_country_requires_rt_path():
-    with pytest.raises(ValueError, match="not bundled"):
+def test_a_relationship_table_is_required():
+    """The package ships no country's tables, so a bare code cannot load."""
+    with pytest.raises(ValueError, match="ships no country"):
+        Lineage("IN")
+    with pytest.raises(ValueError, match="from_folder"):
         Lineage("ZZ")
 
 
-def test_unknown_country_with_rt_path_works():
+def test_paths_without_facts_take_the_defaults():
     ln = _exampleland_lineage()
     assert ln.country_code == "ZZ"
-    # No bundled validity year for a custom country.
+    # No validity year unless one is stated.
     assert ln.validity_start_year is None
     # Exampleland's baseline carries year=2010, so min_year comes from
     # there (not from the lineage graph's first event year, 2014).
@@ -92,7 +96,7 @@ def test_missing_rt_path_raises():
 
 
 def test_lineage_property_loads_graph(monkeypatch):
-    ln = Lineage("IN")
+    ln = load_india()
     assert ln._lineage is None       # not loaded yet
     g = ln.lineage
     assert ln._lineage is not None   # cached after first access
@@ -105,7 +109,7 @@ def test_relationship_table_merges_name_changes():
     # those rows folded in as NameChange events. Derived from the NCL rather
     # than hardcoded — a magic count goes stale the moment a bad row is
     # removed, which is exactly what happened to the previous `>= 50`.
-    ln = Lineage("IN")
+    ln = load_india()
     n_ncl = len(ln.name_change_log)
     rt = ln.relationship_table
     nc_rows = rt[rt["event_type"] == "NameChange"]
@@ -117,7 +121,7 @@ def test_relationship_table_merges_name_changes():
 
 
 def test_india_years_start_at_validity():
-    ln = Lineage("IN")
+    ln = load_india()
     assert ln.min_year == 1991
     assert ln.years.start == 1991
     # Upper bound is max_event_year + 1 by default.
@@ -125,7 +129,7 @@ def test_india_years_start_at_validity():
 
 
 def test_max_year_caps_years_range():
-    ln = Lineage("IN", max_year=2000)
+    ln = Lineage.from_folder(INDIA_FIXTURE, max_year=2000)
     assert max(ln.years) == 2000
 
 
@@ -133,7 +137,7 @@ def test_max_year_caps_years_range():
 
 
 def test_snapshot_default_year_is_latest():
-    ln = Lineage("IN")
+    ln = load_india()
     snap = ln.snapshot()
     # Latest year defaults to max(years).
     assert (snap["year"] == max(ln.years)).all()
@@ -142,7 +146,7 @@ def test_snapshot_default_year_is_latest():
 
 
 def test_snapshot_specific_year_returns_baseline_units():
-    ln = Lineage("IN")
+    ln = load_india()
     snap_1991 = ln.snapshot(year=1991)
     # 1991 baseline has 467 districts (see project memory).
     assert len(snap_1991) > 400
@@ -151,7 +155,7 @@ def test_snapshot_specific_year_returns_baseline_units():
 
 
 def test_snapshot_year_changes_unit_set():
-    ln = Lineage("IN")
+    ln = load_india()
     snap_1991 = ln.snapshot(year=1991)
     snap_2020 = ln.snapshot(year=2020)
     # India added many districts between 1991 and 2020 via Split events.
@@ -202,7 +206,7 @@ def test_attach_shapefile_without_mapping_or_id_column_errors():
 
 
 def test_shapefile_accessors_raise_before_attach():
-    ln = Lineage("IN")
+    ln = load_india()
     with pytest.raises(RuntimeError, match="No shapefile attached"):
         _ = ln.shapefile
     with pytest.raises(RuntimeError, match="No shapefile attached"):
@@ -232,7 +236,7 @@ def test_propose_stats_mapping_via_lineage_method(tmp_path):
 
 
 def test_repr_indicates_attachment_state():
-    ln = Lineage("IN")
+    ln = load_india()
     assert "no shapefile" in repr(ln)
     assert "country_code='IN'" in repr(ln)
 
@@ -240,7 +244,7 @@ def test_repr_indicates_attachment_state():
 def test_repr_progressive_disclosure():
     # Fresh Lineage: only identity + shapefile state. Cheap to print
     # (no lazy load triggered).
-    ln = Lineage("IN")
+    ln = load_india()
     fresh_repr = repr(ln)
     assert "events=" not in fresh_repr
     assert "years=" not in fresh_repr

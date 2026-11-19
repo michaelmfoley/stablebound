@@ -8,7 +8,7 @@ underlying algorithm functions directly — they construct a
 ``aggregate_stats``.
 
     from stablebound import Lineage, StableBoundary
-    ln = Lineage("IN")
+    ln = Lineage.from_folder("my_country/")      # tables + stablebound.json
     ln.attach_shapefile("modern.shp", mapping="mapping.csv",
                         name_column="DISTRICT_NAME")
     sb = StableBoundary(ln, target_year=1991)

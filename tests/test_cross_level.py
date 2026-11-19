@@ -15,17 +15,18 @@ India (22 errors, then 84).
 
 from __future__ import annotations
 
+from tests.conftest import load_india  # India from tests/fixtures/india_as_shipped, as shipped
+
 import pandas as pd
 import pytest
 
-from stablebound import BUNDLED_COUNTRIES, Lineage
 from stablebound.lineage import LineageGraph
 from stablebound.validate import coarse_universe, validate_coarse_references
 
 
 @pytest.fixture(scope="module")
 def india():
-    return Lineage("IN")
+    return load_india()
 
 
 # --- Regressions: the two false-positive classes ------------------------
@@ -72,11 +73,10 @@ def test_namechange_only_state_is_not_reported_dead(india):
     assert len(seeded) == 32, "1991 India should have 32 states/UTs"
 
 
-def test_bundled_countries_are_clean():
-    """No bundled country may ship with a cross-level error."""
-    for cc in BUNDLED_COUNTRIES:
-        errors = [i for i in Lineage(cc).validate_levels() if i.severity == "error"]
-        assert errors == [], f"{cc}: {[i.message for i in errors]}"
+def test_india_as_shipped_is_clean_across_levels(india):
+    """India, as published, has no cross-level error."""
+    errors = [i for i in india.validate_levels() if i.severity == "error"]
+    assert errors == [], [i.message for i in errors]
 
 
 # --- The check must actually bite --------------------------------------

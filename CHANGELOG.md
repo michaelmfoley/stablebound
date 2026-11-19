@@ -6,6 +6,39 @@ private archive.
 
 ## Unreleased
 
+### Removed — the package ships no country data
+
+The package is now the method only. A country's relationship tables are
+published by whoever maintains them and loaded as shipped with
+`Lineage.from_folder` (see Added). Breaking for any code that called
+`Lineage("IN")`.
+
+- The bundled India tables (`src/stablebound/data/IN/`: lineage, ADM1
+  lineage, name-change log, 1991 baseline), the built-in country list
+  `BUNDLED_COUNTRIES` / `BundledCountry`, and the India name normalizer that
+  lived with them. India's tables are maintained, and published, by the
+  StableBound-India dataset (its repository's `lineage/`, its Zenodo
+  deposit's `intermediates/`), each folder with a `stablebound.json` that
+  carries India's facts and its name rules as data. `Lineage("IN")` now
+  raises, naming `Lineage.from_folder`.
+- `stablebound.india` (the DESAGRI statistics matcher) and `tools/india/`
+  (the scripts that regenerated the bundle and India's shapefile ids). Both
+  moved to the StableBound-India repository, the only user of either;
+  `bundle_data.py` is retired, as there is no bundle to regenerate. The
+  package no longer reads anything outside its own repository.
+- The wheel's package data is `py.typed` only.
+
+Tests: India's published tables are kept as a frozen test fixture,
+`tests/fixtures/india_as_shipped/` (its `PROVENANCE.md` has the sha256s),
+loaded the way a user loads them. Loaded from there they equal the removed
+bundle on every fact, table, graph, validation finding, yearly snapshot,
+normalised name and `export_fews` file; `tests/india_reference.py` holds the
+numbers recorded from the bundle before removal, and
+`tests/fixtures/india_name_rules_expected.json` the removed normalizer's
+output on every India name. Two tests of the product cache that needed a
+locally generated India map now run on Exampleland, so they no longer skip in
+CI.
+
 ### Fixed
 - `fews_export.build_legacy_relationship_table`: the admin2 -> admin1 attribution is now forward-filled to each vintage's package year instead of looked up by exact year, so the base vintage (and a lineage with no events) gets its admin2 hierarchy rows; before, those rows were silently absent unless an event fell in that year.
 - `unit_defs.build_admin1_attribution_table`: a year's rows are now applied territorial-first (Split/Merge/Redistribute children carry their admin1 explicitly), then Coarse/NameChange rows for units alive after them. Previously rows ran in alphabetical `event_type` order, so a same-year Coarse re-attribution of a Split child was overwritten by the child's inherited admin1 (a district created by a split and moved to a new province in the same year ended up under the old province in every unit-defs workbook). Regression tests in `tests/test_same_year_coarse_walk.py`.
@@ -24,18 +57,17 @@ private archive.
   `normalizer_from_rules`). Before this, India's tables as published (headers
   `ADM2_ID`, `CHANGE_YEAR` ...) could not be loaded at all — the baseline and
   name-change log failed the schema check — and a district-level country
-  loaded by path was silently read as admin level 1. Pinned by rebuilding
-  India's published files from the bundle and requiring
-  `Lineage.from_folder` to equal `Lineage("IN")` on every fact, table, graph,
-  validation finding, snapshot 1991-2025, normalised name and `export_fews`
-  file, with "IN" removed from the built-in list; planted faults (wrong
-  mapping, wrong fact, missing rule) are each caught.
+  loaded by path was silently read as admin level 1. Before the bundle was
+  removed, `Lineage.from_folder` on India's published files was required to
+  equal the bundled `Lineage("IN")` on every fact, table, graph, validation
+  finding, snapshot 1991-2025, normalised name and `export_fews` file; the
+  tests now pin the numbers recorded from that bundle (see Removed). Planted
+  faults (wrong mapping, wrong fact, missing rule) are each caught.
 - `Lineage(...)` keywords `coarse_lineage_path`, `admin_level`,
   `validity_start_year`, `coverage_end_year`, `notes`, `normalizer` and
-  `columns`, so a country not on the built-in list can carry the facts that
-  list held. For a listed country they override the built-in value. A
-  bundled `Lineage` now keeps its normalizer from construction rather than
-  looking it up in the registry at each call.
+  `columns`, so a country carries the facts its tables cannot state (the
+  same ones a `stablebound.json` states). A fact not given takes its default
+  (admin level 1, no coarse lineage, no years, the package normalizer).
 - The readers (`read_relationship_table`, `read_baseline`,
   `read_name_change_log`) take an optional `columns` mapping, applied after
   lowercasing; a mapping naming a header the file lacks, or renaming onto a

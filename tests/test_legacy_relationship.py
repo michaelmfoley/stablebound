@@ -26,6 +26,8 @@ called**.
 
 from __future__ import annotations
 
+from tests.conftest import load_india  # India from tests/fixtures/india_as_shipped, as shipped
+
 import pandas as pd
 import pytest
 
@@ -183,7 +185,7 @@ def test_round_trips_every_event(synthetic_legacy):
 
 
 def test_india_round_trip_preserves_who_exists_and_what_they_are_called():
-    """The semantic assertion, on the hardest bundled country.
+    """The semantic assertion, on the hardest real country (India, as shipped).
 
     India is two-level, 1,017 events, and exercises every event type. Ids and
     event-type labels do not survive (see the module docstring); the name set
@@ -191,7 +193,7 @@ def test_india_round_trip_preserves_who_exists_and_what_they_are_called():
     """
     import tempfile
 
-    ln = Lineage("IN")
+    ln = load_india()
     years = range(1997, 2026)
     with tempfile.TemporaryDirectory() as td:
         res = ln.export_fews(td, years=years, admin0="India", legacy_relationship=True)
@@ -208,7 +210,7 @@ def test_india_round_trip_preserves_who_exists_and_what_they_are_called():
 
 def test_export_fews_writes_the_legacy_file_only_when_asked(tmp_path):
     """The upload set stays exactly three files."""
-    ln = Lineage("IN")
+    ln = load_india()
     plain = ln.export_fews(tmp_path / "a", years=range(2015, 2018), admin0="India")
     assert "legacy_relationship" not in plain
     assert not list((tmp_path / "a").glob("relationshiptable_*.csv"))
@@ -275,7 +277,7 @@ def test_build_deliverables_extends_the_window_so_the_default_path_is_clean(tmp_
 
 
 def test_level2_without_attribution_is_refused():
-    ln = Lineage("IN")
+    ln = load_india()
     from stablebound.fnid import build_admin2_code_map
 
     cm = build_admin2_code_map(ln.lineage, ln.baseline, iso="IN")

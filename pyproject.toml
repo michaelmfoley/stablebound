@@ -59,22 +59,19 @@ where = ["src"]
 
 [tool.setuptools.package-data]
 stablebound = [
+    # The package ships no country data (0.2.0). A country's relationship
+    # tables are published by whoever maintains them and loaded with
+    # Lineage.from_folder(); tests/test_release_scope.py pins this.
     "py.typed",
-    # India is the only bundled country; the wheel carries what the
-    # StableBound India paper describes.
-    "data/IN/lineage.*",
-    "data/IN/lineage_adm1.*",
-    "data/IN/baseline.*",
-    "data/IN/name_change_log.*",
 ]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-# `slow` marks tests that run a full product over a bundled real country
-# (seconds to minutes) rather than a synthetic fixture. CI runs everything;
+# `slow` marks tests that run a full product over a real country (seconds to
+# minutes) rather than a synthetic fixture. CI runs everything;
 # `pytest -m "not slow"` is the fast inner loop.
 markers = [
-    "slow: exercises the bundled India lineage end to end",
+    "slow: exercises the India test fixture (tests/fixtures/india_as_shipped) end to end",
 ]
 # --strict-markers turns a typo'd marker into an error instead of a silently
 # unfiltered test. Warnings are NOT errors here: the package uses UserWarning
@@ -93,19 +90,12 @@ target-version = "py310"
 select = ["E", "F", "W"]
 
 [tool.ruff.lint.per-file-ignores]
-# Verbatim port of the legacy India stats matcher (moved into the package
-# 2026-07 with only determinism fixes). Reflowing it now would bury the
-# real diff when its generic parts are lifted into `match.py`; revisit
-# this ignore once that lift lands.
-"src/stablebound/india/matcher.py" = ["E501"]
 # Scripts, not library code. Each begins with a `sys.path.insert` preamble
 # before importing `stablebound` (E402), and carries long literal paths,
 # expected-output tables, and report strings (E501). `rt` / `mb` bindings
 # in tests are constructed for their validation side effects (F841).
 "tests/**" = ["E501", "E402", "F841"]
 "examples/**" = ["E501", "E402"]
-# The India data generators under tools/ carry the same script-style preambles.
-"tools/**" = ["E501", "E402", "F841", "E712", "E731"]
 # Tutorial notebook: a bare `import stablebound` cell is the intended way to
 # show a reader their install worked, so an "unused" import is the point.
 "notebooks/**" = ["E501", "E402", "F401"]

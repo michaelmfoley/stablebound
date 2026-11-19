@@ -1,34 +1,43 @@
 """Name-tidying rules written as data reproduce India's normalizer exactly.
 
-India's rules are leaving the package's code for the ``stablebound.json``
+India's rules left the package's code in 0.2.0 for the ``stablebound.json``
 that ships with India's tables. These tests pin that the data form gives the
-same answer as the function it replaces on every name in the India tables
-and on a set chosen to hit each rule, and that each rule actually matters
-(dropping any one changes some output — otherwise the comparison could not
-tell the rules apart from no rules at all).
+same answer as the function it replaced on every name in India's tables and
+on a set chosen to hit each rule — against outputs recorded from that
+function before it was removed (tests/fixtures/india_name_rules_expected.json),
+not against the code under test — and that each rule actually matters
+(dropping any one changes some output; otherwise the comparison could not tell
+the rules apart from no rules at all).
 """
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
 import pytest
 
 from stablebound import CountryFolderError, normalize_name, normalizer_from_rules
-from stablebound.data import _india_normalizer
 from tests.india_reference import AWKWARD_NAMES, INDIA_NAME_RULES, india_names
 
+EXPECTED = json.loads(
+    (Path(__file__).resolve().parent / "fixtures" / "india_name_rules_expected.json")
+    .read_text(encoding="utf-8")
+)["expected"]
 
-@pytest.fixture(scope="module")
-def names() -> list[str]:
-    return india_names()
 
-
-def test_india_rules_equal_the_india_normalizer_on_every_name(names):
-    rules = normalizer_from_rules(INDIA_NAME_RULES)
-    # 892 distinct names on 18 Nov 2026 (every unit, state and renamed name in
-    # the four tables, plus the awkward set). A much smaller number means the
+def test_the_recorded_outputs_cover_every_india_name():
+    """Guard: the frozen expectations name every name the fixture holds."""
+    names = india_names()
+    # 892 distinct names on 18-19 Nov 2026. A much smaller number means the
     # tables were not read, and the comparison below would prove little.
     assert len(names) > 850, f"fixture drift: only {len(names)} names read"
-    diff = [(n, rules(n), _india_normalizer(n)) for n in names if rules(n) != _india_normalizer(n)]
+    assert set(names) == set(EXPECTED)
+
+
+def test_india_rules_reproduce_the_recorded_outputs_on_every_name():
+    rules = normalizer_from_rules(INDIA_NAME_RULES)
+    diff = [(n, rules(n), want) for n, want in EXPECTED.items() if rules(n) != want]
     assert diff == []
 
 
@@ -44,9 +53,8 @@ def test_india_rules_equal_the_india_normalizer_on_every_name(names):
     ],
 )
 def test_india_rules_known_outputs(raw, expected):
-    # Pinned values, recorded from the bundled India normalizer on 18 Nov
-    # 2026 (the unbundle plan's B0 anchors), so this keeps meaning something
-    # after that function is removed from the package.
+    # Recorded from the then-bundled India normalizer on 18 Nov 2026 (the
+    # unbundle plan's B0 anchors).
     assert normalizer_from_rules(INDIA_NAME_RULES)(raw) == expected
 
 

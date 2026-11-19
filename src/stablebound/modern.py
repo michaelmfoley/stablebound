@@ -8,7 +8,7 @@ shapefile and rescales history backward — for every modern unit,
 the user gets a full time series on the present-day extent.
 
     from stablebound import Lineage, ModernBoundary
-    ln = Lineage("IN")
+    ln = Lineage.from_folder("my_country/")      # tables + stablebound.json
     ln.attach_shapefile("modern.shp", mapping="mapping.csv",
                         name_column="DISTRICT_NAME")
     mb = ModernBoundary(ln)

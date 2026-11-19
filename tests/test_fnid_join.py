@@ -8,6 +8,8 @@ onboarding a country (India needed ~150 hand-curated aliases).
 
 from __future__ import annotations
 
+from tests.conftest import load_india  # India from tests/fixtures/india_as_shipped, as shipped
+
 from pathlib import Path
 
 import pandas as pd
@@ -32,7 +34,7 @@ def test_fnid_map_is_exposed_for_converted_lineages(xx):
 
 def test_canonical_lineage_has_no_fnid_map():
     """India is hand-authored — there are no FNIDs to join on."""
-    ln = Lineage("IN")
+    ln = load_india()
     assert ln.fnid_map is None
     with pytest.raises(RuntimeError, match="no FNID map"):
         ln.attach_stats_by_fnid(pd.DataFrame({"FNID": ["IN2015A20102"]}))

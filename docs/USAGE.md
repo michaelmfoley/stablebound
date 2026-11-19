@@ -35,8 +35,8 @@ Name matching is human-in-the-loop: `propose_shapefile_mapping` /
 `propose_stats_mapping` generate a reviewable mapping proposal (with fuzzy
 matching and homonym warnings), the researcher reviews/edits it as a CSV,
 and `attach_shapefile` / `attach_stats_ids` apply it. The pipeline itself
-then runs on canonical IDs only. See `tools/india/prepare_shapefile.py`
-for a worked matching script.
+then runs on canonical IDs only. For a worked matching script, see
+`tools/prepare_shapefile.py` in the `stablebound-india` repository.
 
 ### Relationship table schema
 
@@ -93,16 +93,19 @@ Long-form, with canonical IDs already attached:
 
 ## Lineage construction
 
-`Lineage` is the entry point. For the bundled country (India, `IN`), all
-you need is the country code:
+`Lineage` is the entry point. The package ships no country's tables; a
+country's are published by whoever maintains them, and a folder holding them
+with a `stablebound.json` loads as it is (format below):
 
 ```python
 from stablebound import Lineage
 
-ln = Lineage("IN")
+ln = Lineage.from_folder("my_country/")
+# India, as published with the StableBound-India dataset:
+ln = Lineage.from_folder("stablebound_india/intermediates")
 ```
 
-For custom countries, supply the three input paths:
+Or supply the input paths yourself:
 
 ```python
 ln = Lineage(
@@ -454,9 +457,12 @@ neither reported that year.
 
 The full-scale application — 786 modern districts, about 1,000 events over
 1991–2025, the DES crop statistics — lives in the separate `stablebound-india`
-repository, which pins this package. The scripts that regenerate the bundled
-India data and the shipped shapefile ids from the canonical sources are under
-`tools/india/` here (they need `STABLEBOUND_DATA_ROOT`).
+repository, which pins this package. India's relationship tables are
+maintained there (`lineage/`, with its `stablebound.json`) and published in
+its Zenodo deposit (`intermediates/`), loadable with `Lineage.from_folder`;
+the scripts that build its shapefile ids are in that repository's `tools/`.
+Until 0.2.0 this package carried a copy of India's tables; it no longer
+ships any country's data.
 
 ## Modern boundary product
 
@@ -487,7 +493,7 @@ same `Lineage`.
 ```python
 from stablebound import Lineage, ModernBoundary
 
-ln = Lineage("IN")
+ln = Lineage.from_folder("my_country/")
 ln.attach_shapefile("modern_with_ids.geojson")
 
 mb = ModernBoundary(ln, target_year=1997, output_dir="./_out")

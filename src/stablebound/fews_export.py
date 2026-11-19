@@ -20,8 +20,9 @@ not change any existing behaviour.
 **Matching is deliberately out of scope.** Admin definitions and the relationship
 table need no name matching (pure lineage → FNID). Only the AgStats file needs
 name → id resolution, which is country-specific; the caller performs it upstream
-(India: ``stablebound.india.match_stats_to_lineage``; other countries:
-``propose_stats_mapping`` → review → ``attach_stats_ids``) and passes statistics
+(India: its own DESAGRI matcher, kept with the India pipeline in the
+stablebound-india repository; generally: ``propose_stats_mapping`` → review →
+``attach_stats_ids``) and passes statistics
 that already carry a ``unit_id`` column. :func:`attach_stats_fnids` only stamps
 FNIDs onto already-matched rows.
 

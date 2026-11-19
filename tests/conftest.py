@@ -28,6 +28,43 @@ collect_ignore_glob = ["* 2.py", "*/* 2.py"]
 TESTS = Path(__file__).resolve().parent
 SYNTHETIC = TESTS / "fixtures" / "synthetic"
 EXAMPLELAND = TESTS.parent / "examples" / "exampleland"
+#: India's relationship tables exactly as the StableBound-India deposit
+#: publishes them (its own file names and UPPERCASE headers) plus their
+#: stablebound.json. Frozen: see PROVENANCE.md there. The package's only
+#: real-country test data, loaded the way a user loads it.
+INDIA_FIXTURE = TESTS / "fixtures" / "india_as_shipped"
+
+
+def load_india():
+    """A fresh India ``Lineage`` from the frozen fixture, loaded as shipped."""
+    from stablebound import Lineage
+
+    return Lineage.from_folder(INDIA_FIXTURE)
+
+
+def india_tables() -> dict:
+    """India's four tables in the package's columns, unmerged.
+
+    Read by the package's own readers through the fixture's
+    ``stablebound.json`` column mapping — what ``Lineage.from_folder`` reads,
+    minus the name-change merge. Keys: ``rt``, ``adm1``, ``ncl`` (with
+    ``level``), ``base`` (filtered to the validity year).
+    """
+    from stablebound import read_country_description
+    from stablebound.io import read_baseline, read_name_change_log, read_relationship_table
+
+    d = read_country_description(INDIA_FIXTURE)
+    c = d.columns
+    return {
+        "rt": read_relationship_table(d.files["relationship_table"],
+                                      columns=c.get("relationship_table")),
+        "adm1": read_relationship_table(d.files["coarse_lineage"],
+                                        columns=c.get("coarse_lineage")),
+        "ncl": read_name_change_log(d.files["name_change_log"],
+                                    columns=c.get("name_change_log")),
+        "base": read_baseline(d.files["baseline"], base_year=d.validity_start_year,
+                              columns=c.get("baseline")),
+    }
 
 
 @dataclass(frozen=True)
@@ -134,39 +171,44 @@ def get_synthetic(name: str) -> SyntheticCountry:
 
 
 @pytest.fixture
-def bundle_synthetic(monkeypatch):
-    """Register a synthetic fixture in ``BUNDLED_COUNTRIES`` for one test.
+def synthetic_with_facts():
+    """A synthetic fixture loaded with stated country facts.
 
-    The bundled branch of ``Lineage.__init__`` is what sets ``validity_start_year``,
-    ``coverage_end_year``, ``admin_level`` and ``notes`` from the registry; none of
-    it is reachable from a custom-country ``Lineage``, and India is the only real
-    entry. India cannot express ``coverage_end_year > max_event_year`` (both are
-    2025), so the coverage-window behaviour has no bundled subject without this.
+    The facts a country's tables cannot state about themselves —
+    ``validity_start_year``, ``coverage_end_year``, ``admin_level``, ``notes`` —
+    are passed as ``Lineage`` keywords (the same thing a ``stablebound.json``
+    does). India cannot express ``coverage_end_year > max_event_year`` (both are
+    2025), so the coverage-window behaviour needs a synthetic subject.
 
-    ``monkeypatch.setitem`` on the registry dict is picked up by ``Lineage``
-    (which imports the same dict object) and reverted after the test.
+    Until 0.2.0 this registered the fixture in the package's built-in country
+    list (``bundle_synthetic``); the package no longer has one.
     """
-    import stablebound.data as data_mod
-    from stablebound.data import BundledCountry
+    from stablebound import Lineage
 
-    def _register(name: str, *, code: str, coverage_end_year: int | None = None,
-                  admin_level: int = 1, notes: str = "") -> BundledCountry:
+    def _load(name: str, *, code: str, coverage_end_year: int | None = None,
+              admin_level: int = 1, notes: str = "") -> Lineage:
         c = get_synthetic(name)
-        base_year = int(c.baseline_df()["year"].min())
-        entry = BundledCountry(
-            country_code=code,
-            lineage_path=c.lineage_path,
+        return Lineage(
+            code,
+            relationship_table_path=c.lineage_path,
             baseline_path=c.baseline_path,
-            name_change_log_path=None,
-            validity_start_year=base_year,
+            validity_start_year=int(c.baseline_df()["year"].min()),
             coverage_end_year=coverage_end_year,
             admin_level=admin_level,
-            notes=notes or f"synthetic fixture {name!r} registered for one test",
+            notes=notes or f"synthetic fixture {name!r} loaded with stated facts",
         )
-        monkeypatch.setitem(data_mod.BUNDLED_COUNTRIES, code, entry)
-        return entry
 
-    return _register
+    return _load
+
+
+# --- India, from the frozen fixture ---------------------------------------
+
+
+@pytest.fixture(scope="session")
+def india():
+    """India as shipped, loaded once per session. Do not mutate it: tests that
+    attach a shapefile or otherwise change state use :func:`load_india`."""
+    return load_india()
 
 
 # --- Exampleland ---------------------------------------------------------

@@ -466,7 +466,7 @@ temporal      merge                 2
 | `../tests/fixtures/synthetic/legacy_admin1/` | the second synthetic country (sections 5–9): a split, a same-id rename and a merge, in canonical form |
 | `../tests/fixtures/rt_convert/relationshiptable_XX.csv` | the same country in the legacy FEWS dialect, hand-authored; its README explains the row blocks |
 | `../tests/fixtures/synthetic/` | ten more small countries, one hazard each (cascade, redistribute, homonyms, diacritics, late reporting, ...); `test_qualification.py` runs one invariant battery across all of them |
-| `../tools/india/` | how the bundled India lineage and the shipped shapefile ids are regenerated from their canonical sources (needs the source data tree) |
+| `../tests/fixtures/india_as_shipped/` | a real country as it is published: India's district tables under their own file names and UPPERCASE headers, with the `stablebound.json` that lets `Lineage.from_folder` load them unchanged (a frozen copy; the master is maintained in the `stablebound-india` repository) |
 
 ---
 
@@ -486,9 +486,7 @@ temporal      merge                 2
 
 ```bash
 python examples/exampleland/run_pipeline.py     # sections 2-4, end to end
-pytest -q                                       # the full suite, about 600 tests
-python tools/india/bundle_data.py --check       # bundled India data matches the canonical sources
-                                                # (needs STABLEBOUND_DATA_ROOT; not runnable from a bare clone)
+pytest -q                                       # the full suite, about 700 tests
 ```
 
 Sections 5–9 are reproduced by `tests/test_match.py`, `tests/test_assess.py`,

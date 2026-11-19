@@ -30,9 +30,9 @@ The matching pipeline runs in priority order:
     3. Fuzzy match (SequenceMatcher ratio >= ``fuzzy_threshold``).
     4. Unmatched (reports best candidate below threshold).
 
-Lifted from the India 5-pass matcher in
-``tools/india/prepare_shapefile.py`` with the country-specific
-bits (normalizer rules, override dicts) made overrideable.
+Lifted from the India 5-pass shapefile matcher (now
+``tools/prepare_shapefile.py`` in the stablebound-india repository) with the
+country-specific bits (normalizer rules, override dicts) made overrideable.
 """
 
 from __future__ import annotations
@@ -405,12 +405,11 @@ def _infer_year_by_name(
 
 # --- Year-aware ancestor walk (opt-in for propose_stats_mapping) --------
 #
-# Mirrors the year-validation logic in ``stablebound.india.matcher``
-# (``_year_compatible`` / ``_walk_year_compat_ancestors`` /
-# ``_earliest_created_ancestor``). Kept as an independent copy so the
-# generic matcher doesn't import a country submodule; the algorithm and
-# its deterministic tie-breaks are identical. When a name resolves to a
-# unit_id that wasn't alive in the stats row's year (typically a
+# The year-validation logic India's DESAGRI matcher uses (that matcher lives
+# with the India pipeline in the stablebound-india repository and imports
+# these three through their public names, defined at the end of this
+# module). When a name resolves to a unit_id that wasn't alive in the stats
+# row's year (typically a
 # post-split child id attached to pre-split data), we walk up the
 # lineage's parent chain for a year-compatible ancestor.
 

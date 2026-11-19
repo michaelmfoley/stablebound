@@ -1,9 +1,11 @@
-"""The release scope: India is the only bundled country.
+"""The release scope: the package ships no country data (0.2.0).
 
-These tests pin the three properties that make a single-country release safe to
-ship: the registry holds exactly India, every path it points at is inside the
-package data directory and exists, and the wheel's package-data globs cannot
-pick up anything else.
+A country's relationship tables are published by whoever maintains them and
+loaded with ``Lineage.from_folder``; the package is the engine only. These
+tests pin that: no data directory or country-specific module in the source
+tree, no package-data glob that could pick a table up, no registry left
+behind in the public API — and the one real country the tests use still
+loads, as shipped, without warnings.
 """
 
 from __future__ import annotations
@@ -12,43 +14,38 @@ import re
 import warnings
 from pathlib import Path
 
-from stablebound import BUNDLED_COUNTRIES, Lineage
+import stablebound
+from tests.conftest import load_india  # India from tests/fixtures/india_as_shipped
 
 REPO = Path(__file__).resolve().parents[1]
-PACKAGE_DATA = REPO / "src" / "stablebound" / "data"
+SRC = REPO / "src" / "stablebound"
+TABLE_SUFFIXES = {".xlsx", ".xls", ".csv", ".geojson", ".shp", ".gpkg", ".parquet"}
 
 
-def test_india_is_the_only_bundled_country():
-    assert sorted(BUNDLED_COUNTRIES) == ["IN"]
+def test_no_country_data_directory_or_module_in_the_source_tree():
+    """The one assertion that catches a half-done removal or a re-added bundle."""
+    assert not (SRC / "data").exists(), "src/stablebound/data/ is back"
+    assert not (SRC / "india").exists(), "src/stablebound/india/ is back"
+    tables = [p for p in SRC.rglob("*") if p.suffix.lower() in TABLE_SUFFIXES]
+    assert tables == [], f"data files inside the package source: {tables}"
 
 
-def test_every_registry_path_is_inside_the_package_data_directory():
-    for cc, entry in BUNDLED_COUNTRIES.items():
-        for label in ("lineage_path", "baseline_path", "name_change_log_path",
-                      "coarse_lineage_path"):
-            p = getattr(entry, label)
-            if p is None:
-                continue
-            assert PACKAGE_DATA in p.parents, f"{cc}.{label} resolved outside package data: {p}"
-            assert p.exists(), f"{cc}.{label} missing: {p}"
-
-
-def test_no_stray_country_directories_survive_in_package_data():
-    """The one assertion that catches a half-done removal or a half-done addition."""
-    dirs = sorted(p.name for p in PACKAGE_DATA.iterdir()
-                  if p.is_dir() and not p.name.startswith("__"))
-    assert dirs == sorted(BUNDLED_COUNTRIES), dirs
-
-
-def test_package_data_globs_ship_india_only():
+def test_package_data_ships_only_the_type_marker():
     text = (REPO / "pyproject.toml").read_text()
-    globs = re.findall(r'"(data/[^"]+)"', text)
-    assert globs, "no package-data globs found"
-    assert all(g.startswith("data/IN/") for g in globs), globs
+    block = re.search(r"\[tool\.setuptools\.package-data\]\s*stablebound = \[(.*?)\]", text, re.S)
+    assert block, "package-data block not found"
+    entries = re.findall(r'"([^"]+)"', block.group(1))
+    assert entries == ["py.typed"], entries
 
 
-def test_loading_a_bundled_country_emits_no_warnings():
+def test_no_builtin_country_registry_in_the_public_api():
+    for name in ("BUNDLED_COUNTRIES", "BundledCountry"):
+        assert not hasattr(stablebound, name), f"stablebound.{name} is back"
+        assert name not in stablebound.__all__
+
+
+def test_loading_a_country_as_shipped_emits_no_warnings():
     with warnings.catch_warnings(record=True) as caught:
         warnings.simplefilter("always")
-        Lineage("IN")
+        load_india()
     assert caught == [], [str(w.message) for w in caught]

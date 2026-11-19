@@ -19,7 +19,6 @@ from .country_folder import (
     read_country_description,
     write_country_description,
 )
-from .data import BUNDLED_COUNTRIES, BundledCountry
 from .data_dict import DataDictionary
 from .fnid import (
     FNIDOverflowError,
@@ -133,8 +132,6 @@ __all__ = [
     "read_legacy_relationship_table",
     "analyze_breakpoints",
     "BreakpointResult",
-    "BUNDLED_COUNTRIES",
-    "BundledCountry",
     "MatchProposal",
     "propose_shapefile_mapping",
     "propose_stats_mapping",

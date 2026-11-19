@@ -81,7 +81,7 @@ The package source tree (`src/stablebound/`):
 
 | File | Purpose | Key functions / classes |
 |---|---|---|
-| `data/__init__.py` + `data/IN/` | The bundled India RT, baseline, ADM1 lineage and name change log, selected by ISO2 code. | `BUNDLED_COUNTRIES`, `BundledCountry` |
+| `country_folder.py` | The `stablebound.json` format: reads and checks a folder's description (which file is which, header mapping, country facts, name rules as data) for `Lineage.from_folder`. The package ships no country's data. | `read_country_description`, `write_country_description`, `normalizer_from_rules`, `CountryDescription`, `CountryFolderError` |
 | `data_dict.py` | `DataDictionary` dataclass for declaring how a long-form stats file maps to canonical columns and which variables are extensive / intensive / ignored. | `DataDictionary` |
 | `lineage_class.py` | The user-facing `Lineage` class. Wraps RT + baseline + name change log + attached shapefile, exposes lazy inspection (`lineage`, `snapshot`, `years`) and shapefile attachment with human-in-the-loop name matching. | `Lineage` |
 | `match.py` | The country-agnostic name matcher (4-pass: homonym → exact → manual → fuzzy). | `propose_shapefile_mapping`, `propose_stats_mapping`, `MatchProposal`, `attach_shapefile_ids`, `attach_stats_ids`, `normalize_name` |
@@ -202,7 +202,7 @@ What happens when you write:
 ```python
 from stablebound import Lineage, StableBoundary, ModernBoundary
 
-ln = Lineage("IN")
+ln = Lineage.from_folder("stablebound_india/intermediates")   # India, as published
 ln.attach_shapefile("modern_with_ids.geojson")
 
 sb = StableBoundary(ln, target_year=1997, max_year=2025, output_dir="./out")
@@ -221,15 +221,17 @@ mb.aggregate_stats(
 )
 ```
 
-### 5.1 `Lineage("IN")` (instant)
+### 5.1 `Lineage.from_folder(...)` (instant)
 
-The constructor validates inputs and stores paths but does not parse
-the RT yet. Lazy properties (`lineage`, `baseline`, `name_change_log`,
-`snapshot`) load on first access. For a bundled country, no path
-arguments are needed; the package resolves them from
-`BUNDLED_COUNTRIES`.
+`from_folder` reads and checks the folder's `stablebound.json`
+(`country_folder.py`: format, keys, that every named file exists, that every
+name rule compiles), then calls the constructor with the paths, the per-table
+header mapping and the country's facts it states. The constructor validates
+inputs and stores paths but does not parse the RT yet. Lazy properties
+(`lineage`, `baseline`, `name_change_log`, `snapshot`) load on first access,
+each through its reader with that table's column mapping.
 
-`lineage_class.py:60-160`.
+`lineage_class.py` (`Lineage.__init__`, `Lineage.from_folder`).
 
 ### 5.2 `ln.attach_shapefile(...)`
 
@@ -456,7 +458,8 @@ map most directly onto the algorithms:
 | `test_modern_boundary.py` | End-to-end on Exampleland. |
 | `test_conservation.py` | Total Year strict equality between products. |
 | `test_qualification.py` | One invariant battery run across every synthetic fixture under `tests/fixtures/synthetic/`. |
-| `test_release_scope.py` | India is the only bundled country and the wheel carries exactly its data. |
+| `test_release_scope.py` | The package ships no country data: no data directory or country module, package data `py.typed` only, no country registry in the API. |
+| `test_country_folder.py`, `test_caller_facts.py`, `test_name_rules.py` | India's published tables (frozen in `tests/fixtures/india_as_shipped/`) load as shipped and give the numbers recorded from the pre-0.2.0 bundled copy; planted mapping, fact and rule faults are caught. |
 
 Run: `pytest tests/` (about two minutes on a laptop).
 
@@ -479,8 +482,9 @@ Documented for honesty; see also Known Issues in the README.
 For specific concerns:
 
 - **Adopting the package for a new country**: read `USAGE.md` §"Inputs"
-  and §"Quickstart"; copy `tools/india/prepare_inputs.py` as a
-  template.
+  and §"Quickstart", then write a `stablebound.json` for your tables
+  (`USAGE.md` §"Loading a folder as it is shipped"; India's, in
+  `tests/fixtures/india_as_shipped/`, is a complete example).
 - **The math behind a specific algorithm**: `methodology.md` for stable,
   `methodology_modern.md` for modern. Each section pairs to a paper
   algorithm.

@@ -3,29 +3,30 @@
 Two kinds of oracle. The synthetic registry supplies structure: blank every
 id, re-mint, and the graph must still say who exists when and how many
 stable groups there are — the same expectations `test_qualification` pins
-for the authored ids. The bundled India files supply realism: a rename and a
-split in the same year, districts moving into a state created that year,
-two living districts that share a name, a name-change log for both levels.
-Blanking the bundled ids and recovering them is the strongest check this
-helper can get without a second country.
+for the authored ids. India's tables (the frozen fixture in
+tests/fixtures/india_as_shipped) supply realism: a rename and a split in the
+same year, districts moving into a state created that year, two living
+districts that share a name, a name-change log for both levels. Blanking
+India's ids and recovering them is the strongest check this helper can get
+without a second country.
 """
 
 from __future__ import annotations
+
+from tests.conftest import load_india  # India from tests/fixtures/india_as_shipped, as shipped
 
 import pandas as pd
 import pytest
 
 from stablebound import (
-    BUNDLED_COUNTRIES,
     IdAssignmentError,
-    Lineage,
     assign_unit_ids,
 )
 from stablebound.groups import build_stable_groups
 from stablebound.lineage import LineageGraph
 from stablebound.snapshot import build_snapshot
 from stablebound.validate import validate_lineage
-from tests.conftest import get_synthetic
+from tests.conftest import get_synthetic, india_tables
 
 ID_COLS = ("parent_id", "child_id", "parent_coarse_id", "child_coarse_id")
 
@@ -241,18 +242,13 @@ def test_bad_mode_is_refused():
         assign_unit_ids(syn.lineage_df(), syn.baseline_df(), mode="redo")
 
 
-# --- The bundled India files as a real-data oracle ----------------------------
+# --- India's tables as a real-data oracle --------------------------------------
 
 
 @pytest.fixture(scope="module")
 def india():
-    e = BUNDLED_COUNTRIES["IN"]
-    return {
-        "rt": pd.read_excel(e.lineage_path),
-        "base": pd.read_csv(e.baseline_path),
-        "ncl": pd.read_excel(e.name_change_log_path),
-        "adm1": pd.read_excel(e.coarse_lineage_path),
-    }
+    """India's four tables, unmerged, in the package's columns (the frozen fixture)."""
+    return india_tables()
 
 
 def test_india_coarse_ids_are_recovered_through_the_adm1_lineage(india):
@@ -278,7 +274,7 @@ def test_india_coarse_ids_created_by_an_event_need_the_coarse_lineage(india):
         assign_unit_ids(rt, india["base"], name_change_log=india["ncl"])
 
 
-def test_india_full_rebuild_reproduces_the_bundled_history(india):
+def test_india_full_rebuild_reproduces_the_authored_history(india):
     """Every unit id blanked and re-minted from names: the same districts must
     exist in every year and the same stable groups must come out."""
     rt = india["rt"].copy()
@@ -287,11 +283,11 @@ def test_india_full_rebuild_reproduces_the_bundled_history(india):
                           coarse_lineage=india["adm1"], mode="rebuild")
     graph = LineageGraph.from_dataframe(res.lineage, validate=False)
     seed = set(india["base"]["unit_id"].astype(str))
-    bundled = Lineage("IN")
+    authored = load_india()
     for year in (1991, 2000, 2012, 2025):
-        assert len(build_snapshot(graph, year, additional_units=seed)) == len(bundled.snapshot(year))
+        assert len(build_snapshot(graph, year, additional_units=seed)) == len(authored.snapshot(year))
     mine = build_stable_groups(graph, base_year=1991, additional_units=seed)
-    theirs = build_stable_groups(bundled.lineage, base_year=1991, additional_units=seed)
+    theirs = build_stable_groups(authored.lineage, base_year=1991, additional_units=seed)
     assert len(set(mine.values())) == len(set(theirs.values()))
     assert not [i for i in res.issues if i.severity == "error"]
     # Two Karnataka/Chhattisgarh districts share the name Bijapur; the log row

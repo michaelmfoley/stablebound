@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from tests.conftest import load_india  # India from tests/fixtures/india_as_shipped, as shipped
+
 from pathlib import Path
 
 import geopandas as gpd
@@ -662,7 +664,7 @@ def test_attach_stats_ids(tmp_path, exampleland_graph, exampleland_baseline):
     assert attached["unit_id"].tolist() == ["E.001", "E.001", "E.002"]
 
 
-# --- Bundled data smoke test --------------------------------------------
+# --- Homonyms, and India's name rules -------------------------------------
 
 
 @pytest.fixture()
@@ -757,48 +759,47 @@ def test_propose_stats_with_coarse_column(homonym_graph):
     }
 
 
-def test_bundled_india_has_normalizer():
-    # The India bundle ships a domain-specific normalizer. Without it,
-    # the README quickstart hits 92% unmatched on Geolocet-style names.
-    from stablebound import BUNDLED_COUNTRIES, normalize_name
-    in_normalizer = BUNDLED_COUNTRIES["IN"].normalizer
-    assert in_normalizer is not None
-    # The India normalizer strips ' District' suffixes.
-    assert in_normalizer("Hamirpur District") == "hamirpur"
+def test_india_as_shipped_carries_its_name_rules():
+    # India's stablebound.json ships its name-tidying rules as data. Without
+    # them, Geolocet-style names went 92% unmatched in the README quickstart.
+    from stablebound import normalize_name
+    ln = load_india()
+    # India's rules strip ' District' suffixes.
+    assert ln.default_normalizer("Hamirpur District") == "hamirpur"
     # The default normalizer doesn't.
     assert normalize_name("Hamirpur District") == "hamirpur district"
 
 
 def test_a_country_without_a_normalizer_uses_the_package_default(exampleland):
-    # Exampleland is not bundled and declares no normalizer, so the package
-    # default applies unchanged: no suffix stripping.
+    # Exampleland declares no name rules, so the package default applies
+    # unchanged: no suffix stripping.
     assert exampleland.default_normalizer("Hamirpur District") == "hamirpur district"
 
 
-def test_lineage_propose_uses_bundled_normalizer():
-    # Calling Lineage('IN').propose_shapefile_mapping without an
-    # explicit normalizer should apply the India bundled one.
-    from stablebound import Lineage
-    ln = Lineage("IN")
+def test_lineage_propose_uses_the_folders_name_rules():
+    # load_india().propose_shapefile_mapping without an explicit normalizer
+    # applies India's name rules, from its stablebound.json.
+    ln = load_india()
     # `default_normalizer` exposes what would be used.
     assert ln.default_normalizer("Hamirpur District") == "hamirpur"
-    # An explicit user normalizer overrides the bundled one.
+    # An explicit user normalizer overrides the folder's rules.
     def custom(s):
         return s.upper()
 
     assert ln._resolve_normalizer(custom) is custom
 
 
-def test_bundled_india_loads():
-    from stablebound import BUNDLED_COUNTRIES
+def test_india_tables_load_as_published():
+    from stablebound import read_country_description
     from stablebound.io import read_relationship_table
+    from tests.conftest import INDIA_FIXTURE
 
-    entry = BUNDLED_COUNTRIES["IN"]
-    assert entry.lineage_path.exists(), f"missing bundled file: {entry.lineage_path}"
-    assert entry.baseline_path.exists()
-    assert entry.name_change_log_path is not None and entry.name_change_log_path.exists()
+    desc = read_country_description(INDIA_FIXTURE)
+    for table in ("relationship_table", "coarse_lineage", "baseline", "name_change_log"):
+        assert desc.files[table].exists(), f"missing fixture file: {desc.files[table]}"
 
-    rt = read_relationship_table(entry.lineage_path)
+    # India's file as published has UPPERCASE headers; the reader lowercases.
+    rt = read_relationship_table(desc.files["relationship_table"])
     # India has hundreds of events. Just check that we got a non-empty
     # frame with the canonical schema.
     assert len(rt) > 100
@@ -1239,15 +1240,14 @@ def test_india_normalizer_strips_the_desagri_state_suffix():
     """DESAGRI writes "Villupuram (TN)"; without stripping, nothing matches.
 
     Measured on the real statistics: the documented path
-    (`Lineage("IN").propose_stats_mapping`) resolved 13,503 of 17,049
+    (`load_india().propose_stats_mapping`) resolved 13,503 of 17,049
     combinations (79%) while the bespoke India matcher resolved 16,468, and
     almost the entire gap was this suffix rather than any algorithmic
     difference. With it stripped the generic matcher reaches 16,616 (97.5%).
-    See qualification/compare_matchers.py.
+    See qualification/compare_matchers.py. The rule now ships as data, in
+    India's stablebound.json (``strip_before_lowercase``).
     """
-    from stablebound.data import BUNDLED_COUNTRIES
-
-    norm = BUNDLED_COUNTRIES["IN"].normalizer
+    norm = load_india().default_normalizer
     assert norm("Villupuram (TN)") == "villupuram"
     assert norm("Beed (MH)") == "beed"
     assert norm("Saran (BR)") == "saran"

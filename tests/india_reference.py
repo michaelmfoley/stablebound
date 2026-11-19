@@ -1,26 +1,25 @@
 """India as it is published: headers, column mapping and name rules as data.
 
 India's relationship tables are maintained in the stablebound-india
-repository and published in its Zenodo deposit with their own headers
-(``ADM2_ID``, ``CHANGE_YEAR``, ``OLD_OFFICIAL_NAME`` ...), not the package's
-canonical ones. ``write_india_folder`` rebuilds that published form from the
-bundled copy — the bundle was converted from those files by renaming columns
-only, so renaming them back gives the published headers with the same cells —
-and writes a ``stablebound.json`` beside them. The tests then load the folder
-with ``Lineage.from_folder`` and require it to equal ``Lineage("IN")``.
+repository and published in its Zenodo deposit under their own file names
+and headers (``ADM2_ID``, ``CHANGE_YEAR``, ``OLD_OFFICIAL_NAME`` ...), with a
+``stablebound.json`` beside them. ``tests/fixtures/india_as_shipped`` is a
+frozen copy of exactly that folder (see its PROVENANCE.md). This module holds
+what the tests need to say about it: the rules and mapping its description
+must carry, the names it contains, and a way to copy it with a planted fault.
 """
 
 from __future__ import annotations
 
 import json
+import shutil
 from pathlib import Path
 
-import pandas as pd
+from tests.conftest import INDIA_FIXTURE, india_tables
 
-from stablebound import BUNDLED_COUNTRIES
-
-#: India's name-tidying rules, written as data. They restate
-#: ``stablebound.data._india_normalizer`` step for step.
+#: India's name-tidying rules, written as data. They restate the India
+#: normalizer the package carried until 0.2.0, step for step; the fixture's
+#: stablebound.json must carry exactly these (test_country_folder checks).
 INDIA_NAME_RULES: dict[str, list[str]] = {
     "strip_before_lowercase": [r"\s*\(([A-Z]{2,3})\)\s*$"],
     "remove_substrings": [" district", " dist.", " dist"],
@@ -32,7 +31,6 @@ INDIA_NAME_RULES: dict[str, list[str]] = {
 #: ``event_year`` once lowercased).
 INDIA_COLUMNS: dict[str, dict[str, str]] = {
     "baseline": {
-        "YEAR": "year",
         "ADM1_ID": "coarse_id",
         "ADM1_NAME": "coarse_name",
         "ADM2_ID": "unit_id",
@@ -40,19 +38,9 @@ INDIA_COLUMNS: dict[str, dict[str, str]] = {
     },
     "name_change_log": {
         "CHANGE_YEAR": "event_year",
-        "LEVEL": "level",
-        "UNIT_ID": "unit_id",
         "OLD_OFFICIAL_NAME": "old_name",
         "NEW_OFFICIAL_NAME": "new_name",
     },
-}
-
-#: The deposit's file names (stablebound-india package_deposit.py).
-INDIA_FILES = {
-    "relationship_table": "lineage_adm2.xlsx",
-    "coarse_lineage": "lineage_adm1.xlsx",
-    "baseline": "baseline_1991.csv",
-    "name_change_log": "name_changes.xlsx",
 }
 
 #: Names that exercise every rule: state suffixes, each "district" variant,
@@ -79,75 +67,83 @@ AWKWARD_NAMES = (
     "Seraikela-Kharsawan",
 )
 
+#: India's numbers recorded 18 Nov 2026 from ``Lineage("IN")`` — the copy then
+#: bundled in the package (stablebound 0.1.5) — before any of the 0.2.0 work
+#: (run B0 of the unbundle plan). They come from that run, not from the code
+#: under test, so a wrong mapping, fact or rule shows up as a changed number.
+B0_ANCHORS = {
+    "admin_level": 2,
+    "validity_start_year": 1991,
+    "coverage_end_year": 2025,
+    "min_year": 1991,
+    "n_events": 1019,
+    "n_baseline_rows": 467,
+    "n_name_change_rows": 50,
+    "units_by_year": {1991: 467, 1997: 523, 2000: 592, 2001: 592, 2011: 641, 2014: 674,
+                      2019: 723, 2022: 745, 2024: 785, 2025: 778},
+    "states_1991": 32,
+    "validation_findings": 45,
+    "normalized": {
+        "Bijapur Dist.": "bijapur",
+        "Dr. B.R. Ambedkar Konaseema": "br ambedkar konaseema",
+        "Hamirpur District": "hamirpur",
+        "Shri Ganganagar": "ganganagar",
+        "Sri Potti Sriramulu Nellore": "potti sriramulu nellore",
+        "Villupuram (TN)": "villupuram",
+    },
+}
+
 
 def india_names() -> list[str]:
-    """Every distinct name in the bundled India tables, plus the awkward set."""
-    b = BUNDLED_COUNTRIES["IN"]
+    """Every distinct name in India's four tables, plus the awkward set."""
+    t = india_tables()
     names: set[str] = set(AWKWARD_NAMES)
-    for path in (b.lineage_path, b.coarse_lineage_path):
-        df = pd.read_excel(path, dtype=str)
+    for key in ("rt", "adm1"):
         for col in ("parent_name", "child_name", "parent_coarse_name", "child_coarse_name"):
-            names.update(df[col].dropna())
-    base = pd.read_csv(b.baseline_path, dtype=str)
-    names.update(base["name"].dropna())
-    names.update(base["coarse_name"].dropna())
-    ncl = pd.read_excel(b.name_change_log_path, dtype=str)
-    names.update(ncl["old_name"].dropna())
-    names.update(ncl["new_name"].dropna())
+            names.update(t[key][col].dropna().astype(str))
+    names.update(t["base"]["name"].dropna().astype(str))
+    names.update(t["base"]["coarse_name"].dropna().astype(str))
+    names.update(t["ncl"]["old_name"].dropna().astype(str))
+    names.update(t["ncl"]["new_name"].dropna().astype(str))
     return sorted(names)
 
 
-def india_description(**override) -> dict:
-    """The ``stablebound.json`` content for India's published folder."""
-    b = BUNDLED_COUNTRIES["IN"]
-    desc = {
-        "_about": "India as published by stablebound-india; rebuilt for the tests.",
-        "format": "stablebound-country/1",
-        "country_code": "IN",
-        "admin_level": b.admin_level,
-        "validity_start_year": b.validity_start_year,
-        "coverage_end_year": b.coverage_end_year,
-        "notes": b.notes,
-        "files": dict(INDIA_FILES),
-        "columns": {t: dict(m) for t, m in INDIA_COLUMNS.items()},
-        "name_rules": {k: list(v) for k, v in INDIA_NAME_RULES.items()},
+def anchors_of(ln) -> dict:
+    """The same numbers as :data:`B0_ANCHORS`, read off a ``Lineage``."""
+    from stablebound.snapshot import build_snapshot
+    from stablebound.validate import coarse_universe
+
+    adm1 = ln.graph(level=1)
+    universe = coarse_universe(ln.lineage, adm1, baseline=ln.baseline)
+    return {
+        "admin_level": ln.admin_level,
+        "validity_start_year": ln.validity_start_year,
+        "coverage_end_year": ln.coverage_end_year,
+        "min_year": ln.min_year,
+        "n_events": len(ln.lineage.events),
+        "n_baseline_rows": len(ln.baseline),
+        "n_name_change_rows": len(ln.name_change_log),
+        "units_by_year": {y: len(ln.snapshot(year=y)) for y in B0_ANCHORS["units_by_year"]},
+        "states_1991": len(set(build_snapshot(adm1, 1991, additional_units=universe))),
+        "validation_findings": len(ln.validation_issues),
+        "normalized": {n: ln.default_normalizer(n) for n in B0_ANCHORS["normalized"]},
     }
-    desc.update(override)
-    return desc
 
 
-def write_india_folder(dest: Path, **override) -> Path:
-    """Write India's four tables under their published headers, plus the JSON.
+def copy_india_folder(dest: Path, **changes) -> Path:
+    """Copy the frozen fixture to ``dest``, replacing top-level JSON keys.
 
-    Returns ``dest``. Keyword arguments replace top-level keys of the
-    description (e.g. ``admin_level=1``), for tests that plant a fault.
+    A value of ``None`` deletes the key. For tests that plant a fault; the
+    fixture itself is never modified.
     """
     dest = Path(dest)
-    dest.mkdir(parents=True, exist_ok=True)
-    b = BUNDLED_COUNTRIES["IN"]
-
-    for src, name in ((b.lineage_path, INDIA_FILES["relationship_table"]),
-                      (b.coarse_lineage_path, INDIA_FILES["coarse_lineage"])):
-        df = pd.read_excel(src)
-        df.columns = [c.upper() for c in df.columns]
-        df.to_excel(dest / name, index=False)
-
-    base = pd.read_csv(b.baseline_path)
-    to_published = {v: k for k, v in INDIA_COLUMNS["baseline"].items()}
-    base = base.rename(columns=to_published)
-    base["Alias"] = ""  # the published baseline carries it; the package ignores it
-    base[["YEAR", "ADM1_ID", "ADM1_NAME", "ADM2_ID", "ADM2_NAME", "Alias"]].to_csv(
-        dest / INDIA_FILES["baseline"], index=False
-    )
-
-    ncl = pd.read_excel(b.name_change_log_path)
-    ncl = ncl.rename(columns={v: k for k, v in INDIA_COLUMNS["name_change_log"].items()})
-    ncl[["CHANGE_YEAR", "LEVEL", "UNIT_ID", "OLD_OFFICIAL_NAME", "NEW_OFFICIAL_NAME"]].to_excel(
-        dest / INDIA_FILES["name_change_log"], index=False
-    )
-
-    (dest / "stablebound.json").write_text(
-        json.dumps(india_description(**override), indent=2, ensure_ascii=False) + "\n",
-        encoding="utf-8",
-    )
+    shutil.copytree(INDIA_FIXTURE, dest)
+    p = dest / "stablebound.json"
+    data = json.loads(p.read_text(encoding="utf-8"))
+    for key, value in changes.items():
+        if value is None:
+            data.pop(key, None)
+        else:
+            data[key] = value
+    p.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     return dest

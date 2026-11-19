@@ -14,7 +14,7 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install ruff
-      - run: ruff check src/ tests/ examples/ tools/ notebooks/
+      - run: ruff check src/ tests/ examples/ notebooks/
 
   # The package ships py.typed, which promises consumers its inline
   # annotations are meaningful. This checks that promise instead of leaving it
@@ -53,10 +53,9 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - run: pip install -e .[dev]
-      # Two tests self-skip on a clean checkout: they need
-      # `tools/india/_prepared/`, which is gitignored and generated locally by
-      # `tools/india/prepare_shapefile.py`. `tests/test_breakpoint.py` also
-      # skips as a whole unless the optional `Rbeast` dependency is installed
-      # (`pip install .[analysis]`), so the skipped count differs between CI
-      # and a local run with the analysis extra.
+      # `tests/test_breakpoint.py` skips as a whole unless the optional
+      # `Rbeast` dependency is installed (`pip install .[analysis]`), so the
+      # skipped count differs between CI and a local run with the analysis
+      # extra. Every other test runs on a clean checkout: the real-country
+      # tests read the frozen India fixture in tests/fixtures/india_as_shipped/.
       - run: pytest -q

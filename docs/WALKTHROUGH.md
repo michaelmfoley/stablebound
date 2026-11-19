@@ -11,7 +11,7 @@ Source-of-truth for the algorithms is `docs/methodology.md` (stable) and `docs/m
 Pure re-exports. Importing `stablebound` triggers no disk reads, validators, or computation. Public surface clusters into 7 groups:
 
 - **Lineage primitives**: `Lineage`, `LineageGraph`, `DataDictionary`
-- **Bundled data**: `BUNDLED_COUNTRIES`, `BundledCountry` (India, `IN`)
+- **Loading a published folder**: `read_country_description`, `write_country_description`, `normalizer_from_rules`, `CountryDescription`, `CountryFolderError` (the `stablebound.json` format; the package ships no country data)
 - **Name matching**: `MatchProposal`, `propose_shapefile_mapping`, `propose_stats_mapping`, `attach_shapefile_ids`, `attach_stats_ids`, `read_mapping`, `normalize_name`
 - **Validation**: `validate_lineage`, `validate_stats_lineage_consistency`, `validate_stable_group_contiguity`, `LineageDataError`, `LineageIssue`, `SchemaError`, `format_issues`
 - **FNID / unit_defs**: `assign_fnids`, `build_fnid`, `build_admin1_code_map`, `build_admin2_code_map`, `FNIDOverflowError`, `build_unit_defs_table`, `build_admin1_attribution_table`, `write_unit_defs_files`
@@ -26,8 +26,8 @@ No `Config` class — removed in the refactor. Per-call kwargs only.
 
 | Path | Call | Source format |
 |---|---|---|
-| **Bundled** | `Lineage("IN")` | Canonical (event-only RT + baseline + optional NCL) bundled in `src/stablebound/data/IN/` |
-| **Custom canonical** | `Lineage("XX", relationship_table_path=..., baseline_path=..., name_change_log_path=...)` | Same canonical schema, user-supplied paths |
+| **Published folder** | `Lineage.from_folder(path)` | Canonical tables (event-only RT + baseline + optional NCL and coarse lineage) under any file names and headers, described by the `stablebound.json` beside them (header mapping, admin level, years, name rules) |
+| **Custom canonical** | `Lineage("XX", relationship_table_path=..., baseline_path=..., name_change_log_path=..., admin_level=..., coarse_lineage_path=..., columns=...)` | Same canonical schema, user-supplied paths and facts |
 | **FEWS legacy** | `Lineage.from_legacy_rt(path, country="XX", admin_level=N, name_change_log_path=...)` | FEWS hierarchical+temporal CSV (`category` + `relationship_type` columns) |
 
 All three return functionally-identical `Lineage` objects. `from_legacy_rt` runs the conversion in-memory (no intermediate files); the baseline is derived from the earliest hierarchical snapshot.
@@ -231,8 +231,8 @@ After attachment: `ln.shapefile`, `ln.shapefile_year` (auto-inferred from real u
 ### Normalization layers
 
 `_resolve_normalizer` picks:
-1. Explicit `normalizer=` kwarg
-2. `BUNDLED_COUNTRIES[ln.country_code].normalizer` (India: strips "district", "dist.", "Sri", "Shri", "Dr.")
+1. Explicit `normalizer=` kwarg to the matching call
+2. The lineage's own: `Lineage(normalizer=...)`, or the `name_rules` of a folder loaded with `from_folder` (India's: strips a "(TN)" state code, "district" / "dist." / "dist", and "Dr.", "Sri", "Shri")
 3. Package default `normalize_name` (lowercase + NFKD + punctuation + whitespace)
 
 ---
@@ -834,7 +834,7 @@ P_multi(year) = ∏ over series-present P_i(year)
 
 | Operation | India scale | Notes |
 |---|---|---|
-| `Lineage("IN")` construction | < 10ms | No disk reads |
+| `Lineage.from_folder(...)` construction | < 10ms | Reads only the small `stablebound.json`; tables load lazily |
 | `.lineage` first access | ~50ms | Parses + validates the RT |
 | `ln.snapshot(year=Y)` | ~5ms | Re-walks every call (no caching) |
 | `sb.build_boundaries()` | ~15s | 26 years (1997–2022) × dissolve per year |
@@ -878,7 +878,6 @@ On India most late reports were of subtypes 2 and 3, i.e. fixable upstream, rath
 - **Warning aggregation** for chatty partial-window logs on India
 - **Soft multicrop reducer** for breakpoints (geomean / any-of)
 - **`cause` column** in `late_reporting.csv` distinguishing the 3 subtypes
-- **`Lineage(..., normalizer=)` slot** for custom (non-bundled) countries
 
 ### Where the canonical schemas live
 

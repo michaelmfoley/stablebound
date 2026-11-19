@@ -7,6 +7,8 @@ regression surface for those specific fixes stays visible.
 
 from __future__ import annotations
 
+from tests.conftest import load_india  # India from tests/fixtures/india_as_shipped, as shipped
+
 import contextlib
 import json
 import sys
@@ -188,8 +190,7 @@ def test_modern_summary_carries_schema_field():
 
 
 def test_lineage_validation_report_returns_text():
-    from stablebound import Lineage
-    ln = Lineage("IN")
+    ln = load_india()
     text = ln.validation_report()
     # India has dozens of non-error findings; the report should
     # acknowledge them, not be empty.
@@ -199,8 +200,7 @@ def test_lineage_validation_report_returns_text():
 
 
 def test_lineage_validation_issues_is_cached():
-    from stablebound import Lineage
-    ln = Lineage("IN")
+    ln = load_india()
     a = ln.validation_issues
     b = ln.validation_issues
     # Same list object — proves caching, also confirms we don't re-run
@@ -246,9 +246,8 @@ def test_auto_log_demoted_to_info(caplog):
     shouted at; they get the line at INFO if they opt into it.
     """
     import logging
-    from stablebound import Lineage
     with caplog.at_level(logging.INFO, logger="stablebound.lineage"):
-        ln = Lineage("IN")
+        ln = load_india()
         _ = ln.lineage   # triggers the log
     # Confirm: at INFO level, the line is captured. (At WARNING, it'd
     # also be captured, but the *level* would differ.)
@@ -346,13 +345,12 @@ def test_aggregate_preserves_mixed_nan_as_real_sum():
 
 
 def test_india_1991_snapshot_has_only_adm2_ids():
-    """The bundled India name_change_log carries 4 ADM1-level renames.
+    """India's name-change log carries 4 ADM1-level renames.
     Pre-fix those polluted the 1991 ADM2 snapshot (471 rows). Post-fix:
     467 rows, none with ADM1 IDs.
     """
-    from stablebound import Lineage
 
-    ln = Lineage("IN")
+    ln = load_india()
     snap = ln.snapshot(year=1991)
     assert len(snap) == 467
     assert not snap["unit_id"].astype(str).str.startswith("IN.ADM1.").any(), (
@@ -624,46 +622,45 @@ def test_validation_report_includes_unmatched_section(tmp_path):
 # --- Phase 4: cache invalidation (handoff #3, pragmatic) ----------------
 
 
-def test_stable_cache_rejected_on_target_year_mismatch(tmp_path):
-    """Building once with target_year=1997, then constructing a new
-    StableBoundary with target_year=1991 on the same output_dir,
-    must NOT return the 1997 cache.
+# These two ran on India's modern map until 0.2.0, which skipped them in CI:
+# the map was a locally generated file. They test the product cache, not
+# India, so they now run on Exampleland, whose map ships with ids attached.
+
+
+def test_stable_cache_rejected_on_target_year_mismatch(exampleland, exampleland_paths,
+                                                       tmp_path):
+    """Building once with target_year=2014, then constructing a new
+    StableBoundary with target_year=2010 on the same output_dir,
+    must NOT return the 2014 cache.
     """
-    from stablebound import Lineage, StableBoundary
+    from stablebound import StableBoundary
 
-    ln = Lineage("IN")
-    PREPARED = Path(__file__).resolve().parents[1] / "tools" / "india" / "_prepared"
-    shp = PREPARED / "India_modern_with_ids.geojson"
-    if not shp.exists():
-        pytest.skip("requires tools/india/_prepared (generated locally by prepare_shapefile.py)")
-    ln.attach_shapefile(shp)
+    ln = exampleland
+    ln.attach_shapefile(exampleland_paths["shapefile"])
 
-    sb1 = StableBoundary(ln, target_year=1997, output_dir=tmp_path)
+    sb1 = StableBoundary(ln, target_year=2014, output_dir=tmp_path)
     sb1.build_boundaries()
-    assert sb1.summary()["year_range"][0] == 1997
+    assert sb1.summary()["year_range"][0] == 2014
 
     # Same output_dir, different target_year. Must reject the cache and rebuild.
-    sb2 = StableBoundary(ln, target_year=1991, output_dir=tmp_path)
+    sb2 = StableBoundary(ln, target_year=2010, output_dir=tmp_path)
     sb2.build_boundaries()
-    assert sb2.summary()["year_range"][0] == 1991
+    assert sb2.summary()["year_range"][0] == 2010
 
 
-def test_stable_cache_rejected_on_country_code_mismatch(tmp_path):
+def test_stable_cache_rejected_on_country_code_mismatch(exampleland, exampleland_paths,
+                                                        tmp_path):
     """If the on-disk summary was written for a different country
     (improbable in practice; programmer error), rebuild rather than
     hydrate stale outputs.
     """
     import json
-    from stablebound import Lineage, StableBoundary
+    from stablebound import StableBoundary
 
-    ln = Lineage("IN")
-    PREPARED = Path(__file__).resolve().parents[1] / "tools" / "india" / "_prepared"
-    shp = PREPARED / "India_modern_with_ids.geojson"
-    if not shp.exists():
-        pytest.skip("requires tools/india/_prepared (generated locally by prepare_shapefile.py)")
-    ln.attach_shapefile(shp)
+    ln = exampleland
+    ln.attach_shapefile(exampleland_paths["shapefile"])
 
-    sb1 = StableBoundary(ln, target_year=1997, output_dir=tmp_path)
+    sb1 = StableBoundary(ln, target_year=2010, output_dir=tmp_path)
     sb1.build_boundaries()
 
     # Tamper with the summary.json to flip the country_code.
@@ -672,10 +669,10 @@ def test_stable_cache_rejected_on_country_code_mismatch(tmp_path):
     summary["country_code"] = "ZZ"
     summary_p.write_text(json.dumps(summary))
 
-    sb2 = StableBoundary(ln, target_year=1997, output_dir=tmp_path)
+    sb2 = StableBoundary(ln, target_year=2010, output_dir=tmp_path)
     sb2.build_boundaries()
     # Rebuild restored the correct country_code.
-    assert sb2.summary()["country_code"] == "IN"
+    assert sb2.summary()["country_code"] == "EX"
 
 
 def test_stable_aggregate_stats_reruns_with_different_stats(tmp_path):

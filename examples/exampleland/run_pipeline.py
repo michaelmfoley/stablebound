@@ -13,8 +13,8 @@ The lineage object and constants come from ``examples/exampleland/
 config.py``. The shapefile already has canonical unit_ids attached;
 the matcher isn't exercised here. See section 5 of ``examples/README.md``
 for the matching workflow on a shapefile with imperfect names, and
-``tools/india/prepare_shapefile.py`` for the real India run (which needs
-the source data tree).
+``tools/prepare_shapefile.py`` in the stablebound-india repository for the
+real India run.
 """
 
 from __future__ import annotations
