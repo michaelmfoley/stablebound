@@ -8,7 +8,7 @@ and [`methodology_modern.md`](methodology_modern.md) (the algorithm references).
 From GitHub, pinned to a release tag:
 
 ```bash
-pip install "git+https://github.com/michaelmfoley/stablebound.git@v0.1.5"
+pip install "git+https://github.com/michaelmfoley/stablebound.git@v0.2.0"
 ```
 
 or for development, from a local clone:

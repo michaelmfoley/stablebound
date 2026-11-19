@@ -3,8 +3,8 @@ message: "If you use StableBound in your research, please cite both the software
 title: "StableBound"
 abstract: "A reproducible framework for harmonizing subnational data across administrative boundary changes."
 type: software
-version: 0.1.5
-date-released: 2026-09-05
+version: 0.2.0
+date-released: 2026-11-19
 license: MIT
 repository-code: "https://github.com/michaelmfoley/stablebound"
 authors:

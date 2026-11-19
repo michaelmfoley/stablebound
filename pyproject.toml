@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "stablebound"
-version = "0.1.5"
+version = "0.2.0"
 description = "Reproducible framework for harmonizing subnational data across administrative boundary changes."
 readme = "README.md"
 license = { file = "LICENSE" }

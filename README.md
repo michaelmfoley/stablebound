@@ -3,7 +3,7 @@
 A reproducible framework for harmonizing subnational data across administrative
 boundary changes.
 
-> **Status: v0.1.5.** API has stabilized around the
+> **Status: v0.2.0.** API has stabilized around the
 > `Lineage` / `StableBoundary` / `ModernBoundary` triad. The package is
 > the method only and ships no country's data: any country loads from its
 > own relationship tables, as published, with `Lineage.from_folder` (see
@@ -53,7 +53,7 @@ beside them says which file is which and states the facts the tables cannot
 Directly from GitHub, pinned to a release tag:
 
 ```bash
-pip install "git+https://github.com/michaelmfoley/stablebound.git@v0.1.5"
+pip install "git+https://github.com/michaelmfoley/stablebound.git@v0.2.0"
 ```
 
 A wheel and sdist for each release will also be attached to the Zenodo deposit of
@@ -246,7 +246,7 @@ lists the rows the warnings reference.
 
 ## Known Issues
 
-Current as of v0.1.5. These are deliberate, documented limitations rather
+Current as of v0.2.0. These are deliberate, documented limitations rather
 than surprises — several are referenced by name from error messages the
 package raises.
 
